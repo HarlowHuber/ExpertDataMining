@@ -25,6 +25,7 @@ struct dvector
 	std::vector<std::string> other_one_expansions;
 	bool visited = false;
 	bool asked = false;
+	bool isTriple = false;
 };
 
 template<typename T> 
@@ -33,8 +34,12 @@ void print(T t, const int& width, const char& separator)
 	std::cout << std::left << std::setw(width) << std::setfill(separator) << t;
 }
 
-std::vector<std::vector<dvector>> hanselChainSet;
-std::vector<int> kv_attributes;
+std::vector<std::vector<dvector>> hanselChainSet;	// set of Hansel Chains
+std::vector<int> kv_attributes;						// k-value for each attribute of dataset
+std::vector<int> order;								// order of the Hansel Chains
+std::vector<bool> chainsVisited;					// check whether each Chain has been ordered
+int questionsAsked = 0;
+int useTriples;
 
 std::vector<std::vector<dvector>> genChains(int num, int vector_dimension, std::unordered_map<int, std::vector<std::vector<dvector>>> chain)
 {
@@ -191,6 +196,7 @@ int main()
 	std::vector<std::string> attributes(dimension);
 	kv_attributes.resize(dimension);
 
+	// name every attribute to reduce confusion for user
 	for (int i = 0; i < dimension; i++)
 	{
 		std::cout << "\nWhat is the name of attribute x" + std::to_string(i + 1) << "?" << std::endl;
@@ -199,6 +205,8 @@ int main()
 		std::cin.ignore(1000, '\n');
 	}
 
+	// ask for k-values for each attribute
+	// THIS SIMULATION ONLY WORKS FOR K-VALUES OF 2, CURRENTLY!!!
 	for (int i = 0; i < dimension; i++)
 	{
 		std::cout << "\nWhat is the k_value of attribute " + attributes[i] + "?" << std::endl;
@@ -208,9 +216,205 @@ int main()
 	}
 
 	calculateHanselChains(dimension);
+	int numChains = (int)hanselChainSet.size();
+	order.resize(numChains);				
+	chainsVisited.resize(numChains);
 
+	// let the user determine the order of the Hansel Chains
+	// giving the number of a chain which is the same as the current number will preserve the natural order
+	std::cout << "\nThere are " << numChains << " Hansel Chains, labelled 1 through " << numChains << "." << std::endl;
+
+	for (int i = 0; i < numChains; i++)
+	{
+		std::string suffix;
+
+		if (i == 0) suffix = "st";
+		else if (i == 1) suffix = "nd";
+		else if (i == 2) suffix = "rd";
+		else suffix = "th";
+
+		std::cout << "\nWhat is the " << i + 1 << suffix << " Hansel Chain? " << std::endl;
+		std::cin >> order[i];
+		order[i]--;
+
+		if (order[i] == -1)
+		{
+			std::cout << "There is no chain zero. Select a different number chain." << std::endl;
+			i--;
+		}
+		else if (!chainsVisited[order[i]]) chainsVisited[order[i]] = true;
+		else
+		{
+			std::cout << "You already selected this chain. Pick a different chain to go next." << std::endl;
+			i--;
+		}
+
+		std::cin.clear();
+		std::cin.ignore(1000, '\n');
+	}
+
+	auto tempSet = hanselChainSet;
+
+	for (int i = 0; i < numChains; i++)
+	{
+		hanselChainSet[i] = tempSet[order[i]];
+	}
+
+	std::cout << "Use triples or manual order (1/0)?" << std::endl;
+	std::cin >> useTriples;
+
+	std::vector<int> triples;
+
+	if (useTriples)
+	{
+		for (int i = 0; i < numChains; i++)
+		{
+			int chainSize = (int)hanselChainSet[i].size();
+
+			for (int j = 0; j < chainSize; j++)
+			{
+				int hamming_norm = 0;
+
+				for (int k = 0; k < dimension; k++)
+				{
+					if (hanselChainSet[i][j].dataPoint[k] == 1)
+					{
+						hamming_norm++;
+					}
+				}
+
+				if (hamming_norm == ((dimension / 2)  + (dimension % 2)))
+				{
+					triples.push_back(i);
+					triples.push_back(j);
+					hanselChainSet[i][j].isTriple = true;
+				}
+			}
+		}
+
+		// ask expert what class each triple vector belongs to
+		for (int t = 0; t < triples.size() - 1; t += 2)
+		{
+			int vector_class = -1;
+			int i = triples[t];
+			int j = triples[t + 1];
+
+			// if vector has not been visited, then ask user class
+			// else, retrieve class
+			if (!hanselChainSet[i][j].visited)
+			{
+				std::cout << "\nEnter the class for this data point:\n";
+
+				for (int k = 0; k < dimension; k++)
+				{
+					if (hanselChainSet[i][j].dataPoint[k])
+					{
+						std::cout << attributes[k] + "\t\t\t= true (1)" << std::endl;
+					}
+					else
+					{
+						std::cout << attributes[k] + "\t\t\t= false (0)" << std::endl;
+					}
+				}
+
+				std::cout << "Class: " << std::flush;
+				std::cin >> vector_class;
+				std::cin.clear();
+				std::cin.ignore(1000, '\n');
+
+				hanselChainSet[i][j]._class = vector_class;
+				hanselChainSet[i][j].visited = true;
+				hanselChainSet[i][j].asked = true;
+				questionsAsked++;
+			}
+
+			// expand the current vector
+			for (int k = 0; k < dimension; k++)
+			{
+				// possible expansions from successive chains for a given class
+				// triples can expand vectors from previous chains
+				if (vector_class != hanselChainSet[i][j].dataPoint[k])
+				{
+					dvector expanded;
+					expanded.dataPoint = hanselChainSet[i][j].dataPoint;
+					expanded.dataPoint[k] = vector_class;
+
+					// starting in the current chain, search for expanded vector
+					for (int hc = 0; hc < numChains; hc++)
+					{
+						for (int v = 0; v < hanselChainSet[hc].size(); v++)
+						{
+							// expand the vector and mark it as visited
+							// these are "used" expansions
+							if (expanded.dataPoint == hanselChainSet[hc][v].dataPoint && !hanselChainSet[hc][v].visited)
+							{
+								if (vector_class)
+								{
+									hanselChainSet[i][j].used_one_expansions.push_back(std::to_string(hc + 1) + "." + std::to_string(v + 1));
+								}
+								else
+								{
+									hanselChainSet[i][j].used_zero_expansions.push_back(std::to_string(hc + 1) + "." + std::to_string(v + 1));
+								}
+
+								// mark as visited and expand vector (assign class)
+								hanselChainSet[hc][v]._class = vector_class;
+								hanselChainSet[hc][v].visited = true;
+							}
+							else if (expanded.dataPoint == hanselChainSet[hc][v].dataPoint) // if vector is visited, then add to "unused" expansions
+							{
+								if (vector_class)
+								{
+									hanselChainSet[i][j].unused_one_expansions.push_back(std::to_string(hc + 1) + "." + std::to_string(v + 1));
+								}
+								else 
+								{
+									hanselChainSet[i][j].unused_zero_expansions.push_back(std::to_string(hc + 1) + "." + std::to_string(v + 1));
+								}
+							}
+						}
+					}
+				}
+
+				// possible expansions from successive chains for the OPPOSITE of a given class
+				// these are "unused" expansions
+				// DO NOT VISIT OR ASSIGN CLASS
+				int not_vector_class = 1;
+
+				if (vector_class) not_vector_class = 0;
+
+				if (not_vector_class != hanselChainSet[i][j].dataPoint[k])
+				{
+					dvector expanded;
+					expanded.dataPoint = hanselChainSet[i][j].dataPoint;
+					expanded.dataPoint[k] = not_vector_class;
+
+					// starting in the current chain, search for expanded vector
+					for (int hc = 0; hc < numChains; hc++)
+					{
+						for (int v = 0; v < hanselChainSet[hc].size(); v++)
+						{
+							if (expanded.dataPoint == hanselChainSet[hc][v].dataPoint)
+							{
+								if (not_vector_class)
+								{
+									hanselChainSet[i][j].unused_one_expansions.push_back(std::to_string(hc + 1) + "." + std::to_string(v + 1));
+								}
+								else
+								{
+									hanselChainSet[i][j].unused_zero_expansions.push_back(std::to_string(hc + 1) + "." + std::to_string(v + 1));
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// not triples
 	// ask expert what class each vector in each chain belongs to
-	for (int i = (int)hanselChainSet.size() - 1; i >= 0; i--)
+	for (int i = 0; i < numChains; i++)
 	{
 		int chainSize = (int)hanselChainSet[i].size();
 
@@ -240,15 +444,16 @@ int main()
 				std::cin >> vector_class;
 				std::cin.clear();
 				std::cin.ignore(1000, '\n');
-				
+
 				hanselChainSet[i][j]._class = vector_class;
 				hanselChainSet[i][j].visited = true;
 				hanselChainSet[i][j].asked = true;
+				questionsAsked++;
 			}
+			else if (hanselChainSet[i][j].isTriple) continue;
 			else vector_class = hanselChainSet[i][j]._class;
 			
 			// expand the current vector
-			// FIX unused 0-0 includes previous elements in chain 
 			for (int k = 0; k < dimension; k++)
 			{
 				// other one expansions (impossible expansions from previous chains, given a specific ordering of chains)
@@ -261,7 +466,7 @@ int main()
 
 					// starting in the first chain, search for expanded vectors up to the current chain 
 					// not possible up to current vector because, by nature, those vectors would be 0 expansions
-					for (int hc = (int)hanselChainSet.size() - 1; hc > i; hc--)
+					for (int hc = 0; hc < i; hc++)
 					{
 						for (int v = 0; v < hanselChainSet[hc].size(); v++)
 						{
@@ -283,7 +488,7 @@ int main()
 					expanded.dataPoint[k] = 0;
 
 					// starting in the first chain, search for expanded vectors up to the current chain
-					for (int hc = (int)hanselChainSet.size() - 1; hc > i; hc--)
+					for (int hc = 0; hc < i; hc++)
 					{
 						for (int v = 0; v < hanselChainSet[hc].size(); v++)
 						{
@@ -314,7 +519,7 @@ int main()
 					expanded.dataPoint[k] = vector_class;
 
 					// starting in the current chain, search for expanded vector
-					for (int hc = i; hc >= 0; hc--)
+					for (int hc = i; hc < numChains; hc++)
 					{
 						for (int v = 0; v < hanselChainSet[hc].size(); v++)
 						{
@@ -335,13 +540,13 @@ int main()
 								hanselChainSet[hc][v]._class = vector_class;
 								hanselChainSet[hc][v].visited = true;
 							}
-							else if (expanded.dataPoint == hanselChainSet[hc][v].dataPoint) // if vector is already visited, then add to "unused" expansions
+							else if (expanded.dataPoint == hanselChainSet[hc][v].dataPoint) // if vector is visited, then add to "unused" expansions
 							{
 								if (vector_class)
 								{
 									hanselChainSet[i][j].unused_one_expansions.push_back(std::to_string(hc + 1) + "." + std::to_string(v + 1));
 								}
-								else if ((hc == i && v > j) || hc < i)
+								else if (hc > i)
 								{
 									hanselChainSet[i][j].unused_zero_expansions.push_back(std::to_string(hc + 1) + "." + std::to_string(v + 1));
 								}
@@ -364,7 +569,7 @@ int main()
 					expanded.dataPoint[k] = not_vector_class;
 
 					// starting in the current chain, search for expanded vector
-					for (int hc = i; hc >= 0; hc--)
+					for (int hc = i; hc < numChains; hc++)
 					{
 						for (int v = 0; v < hanselChainSet[hc].size(); v++)
 						{
@@ -374,7 +579,7 @@ int main()
 								{
 									hanselChainSet[i][j].unused_one_expansions.push_back(std::to_string(hc + 1) + "." + std::to_string(v + 1));
 								}
-								else if ((hc == i && v > j) || hc < i)
+								else if (hc > i)
 								{
 									hanselChainSet[i][j].unused_zero_expansions.push_back(std::to_string(hc + 1) + "." + std::to_string(v + 1));
 								}
@@ -387,19 +592,23 @@ int main()
 	}
 
 	// restore monotone Boolean function
+	// iterate over every hansel chain, and check each vector for its "lower one" vector, if it has one
 	std::vector<std::vector<int>> boolFunc;
 
 	for (int i = 0; i < hanselChainSet.size(); i++)
 	{
 		for (int j = 0; j < (int)hanselChainSet[i].size(); j++)
 		{
+			// first vector of class 1 is "lower one" vector
 			if (hanselChainSet[i][j]._class)
 			{
 				bool first = false;
 
+				// for every element 1 in the "lower" one vector, 
+				// that element is in a statement of the monotone boolean funciton
 				for (int k = 0; k < dimension; k++)
 				{
-					if (hanselChainSet[i][j].dataPoint[k] == 1)
+					if (hanselChainSet[i][j].dataPoint[k] == 1) 
 					{
 						if (!first)
 						{
@@ -418,6 +627,8 @@ int main()
 	}
 
 	// reduce monotone Boolean function
+	// check if there is a difference of only 1 in the statements of the function, 
+	// then determine which statement is minimal (less attributes)
 	for (size_t i = 0; i < boolFunc.size() - 1; i++)
 	{
 		for (size_t j = i + 1; j < boolFunc.size(); j++)
@@ -434,10 +645,18 @@ int main()
 				right_hamming_norm += boolFunc[j][k];
 			}
 
-			if (difference == 1 && left_hamming_norm != right_hamming_norm)
+			if (difference == 1)
 			{
-				boolFunc.erase(boolFunc.begin() + j);
-				j--;
+				if (left_hamming_norm < right_hamming_norm)
+				{
+					boolFunc.erase(boolFunc.begin() + j);
+					j--;
+				}
+				else if (left_hamming_norm > right_hamming_norm)
+				{
+					boolFunc.erase(boolFunc.begin() + i);
+					i--;
+				}
 			}
 		}
 	}
@@ -460,13 +679,15 @@ int main()
 
 	// print vectors and monotone Boolean Function
 	const char separator = ' ';
-	const int width = 16;
+	const int vWidth = 10;
+	const int width = 18;
 
 	std::cout << "\nMonotone Boolean Function:\n" + boolFuncStr + "\n" << std::endl;
-	print("Number", width, separator);
-	print("Vector", width, separator);
-	print("Class", width, separator);
-	print("Asked", width, separator);
+	print("Number", vWidth, separator);
+	print("Vector", vWidth, separator);
+	print("Class", vWidth, separator);
+	print("Asked", vWidth, separator);
+	print("Triple", vWidth, separator);
 	print("Used 1-1", width, separator);
 	print("Used 0-0", width, separator);
 	print("Unused 1-1", width, separator);
@@ -475,7 +696,7 @@ int main()
 	print("Other 0-0", width, separator);
 	std::cout << std::endl;
 
-	for (int i = (int)hanselChainSet.size() - 1; i >= 0; i--)
+	for (int i = 0; i < numChains; i++)
 	{
 		for (size_t j = 0; j < hanselChainSet[i].size(); j++)
 		{
@@ -529,10 +750,11 @@ int main()
 				otherZeroExpStr += element + ";";
 			}
 
-			print(std::to_string(i + 1) + "." + std::to_string(j + 1) + ":", width, separator);
-			print(vecStr, width, separator);
-			print(hanselChainSet[i][j]._class, width, separator);
-			print(hanselChainSet[i][j].asked, width, separator);
+			print(std::to_string(i + 1) + "." + std::to_string(j + 1) + ":", vWidth, separator);
+			print(vecStr, vWidth, separator);
+			print(hanselChainSet[i][j]._class, vWidth, separator);
+			print(hanselChainSet[i][j].asked, vWidth, separator);
+			print(hanselChainSet[i][j].isTriple, vWidth, separator);
 			print(usedOneExpStr, width, separator);
 			print(usedZeroExpStr, width, separator);
 			print(unusedOneExpStr, width, separator);
@@ -542,6 +764,11 @@ int main()
 			std::cout << std::endl;
 		}
 	}
+
+	print("Questions Asked:", width, separator);
+	print("", width, separator);
+	print("", width, separator);
+	print(questionsAsked, width, separator);
 
 	return EXIT_SUCCESS;
 }
