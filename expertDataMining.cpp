@@ -38,6 +38,7 @@ std::vector<std::vector<dvector>> hanselChainSet;	// set of Hansel Chains
 std::vector<int> kv_attributes;						// k-value for each attribute of dataset
 std::vector<int> order;								// order of the Hansel Chains
 std::vector<bool> chainsVisited;					// check whether each Chain has been ordered
+std::vector<int> orderOfAsking;
 int questionsAsked = 0;
 int useTriples;
 
@@ -260,13 +261,20 @@ int main()
 		hanselChainSet[i] = tempSet[order[i]];
 	}
 
-	std::cout << "Use triples or manual order (1/0)?" << std::endl;
+	std::cout << "\nUse triples or manual order (1/0)?" << std::flush;
 	std::cin >> useTriples;
 
 	std::vector<int> triples;
 
 	if (useTriples)
 	{
+		int trueTriples = 0;
+		int foundTrueTriples = 0;
+
+		std::cout << "Roughly how many triples will result in a value of true? (Enter 0 if that is unknown)." << std::endl;
+		std::cin >> trueTriples;
+
+		// find the triples
 		for (int i = 0; i < numChains; i++)
 		{
 			int chainSize = (int)hanselChainSet[i].size();
@@ -287,22 +295,43 @@ int main()
 				{
 					triples.push_back(i);
 					triples.push_back(j);
+					triples.push_back(0);
 					hanselChainSet[i][j].isTriple = true;
 				}
 			}
 		}
 
+		srand(time(NULL));
+
 		// ask expert what class each triple vector belongs to
-		for (int t = 0; t < triples.size() - 1; t += 2)
+		for (int t = 0; t < triples.size() - 1; t += 3)
 		{
 			int vector_class = -1;
 			int i = triples[t];
 			int j = triples[t + 1];
 
+			if (trueTriples > 0)
+			{
+				while (true)
+				{
+					int random = (rand() % ((triples.size() - 3) / 3 + 1)) * 3;
+
+					if (triples[random + 2]) continue;
+
+					i = triples[random];
+					j = triples[random + 1];
+					triples[random + 2] = 1;
+					break;
+				}
+			}
+
 			// if vector has not been visited, then ask user class
 			// else, retrieve class
 			if (!hanselChainSet[i][j].visited)
 			{
+				orderOfAsking.push_back(i + 1);
+				orderOfAsking.push_back(j + 1);
+
 				std::cout << "\nEnter the class for this data point:\n";
 
 				for (int k = 0; k < dimension; k++)
@@ -326,6 +355,8 @@ int main()
 				hanselChainSet[i][j].visited = true;
 				hanselChainSet[i][j].asked = true;
 				questionsAsked++;
+
+				if (vector_class) foundTrueTriples++;
 			}
 
 			// expand the current vector
@@ -339,7 +370,7 @@ int main()
 					expanded.dataPoint = hanselChainSet[i][j].dataPoint;
 					expanded.dataPoint[k] = vector_class;
 
-					// starting in the current chain, search for expanded vector
+					// starting in the first chain, search for expanded vector
 					for (int hc = 0; hc < numChains; hc++)
 					{
 						for (int v = 0; v < hanselChainSet[hc].size(); v++)
@@ -389,7 +420,7 @@ int main()
 					expanded.dataPoint = hanselChainSet[i][j].dataPoint;
 					expanded.dataPoint[k] = not_vector_class;
 
-					// starting in the current chain, search for expanded vector
+					// starting in the first chain, search for expanded vector
 					for (int hc = 0; hc < numChains; hc++)
 					{
 						for (int v = 0; v < hanselChainSet[hc].size(); v++)
@@ -409,6 +440,9 @@ int main()
 					}
 				}
 			}
+
+			// determine if the number of triples found is sufficient
+			if (foundTrueTriples >= (trueTriples / 2) + (trueTriples % 2)) break;
 		}
 	}
 
@@ -426,6 +460,9 @@ int main()
 			// else, retrieve class
 			if (!hanselChainSet[i][j].visited)
 			{
+				orderOfAsking.push_back(i + 1);
+				orderOfAsking.push_back(j + 1);
+
 				std::cout << "\nEnter the class for this data point:\n";
 
 				for (int k = 0; k < dimension; k++)
@@ -626,9 +663,25 @@ int main()
 		}
 	}
 
+	std::string boolFuncStr2 = "";
+
+	for (size_t i = 0; i < boolFunc.size(); i++)
+	{
+		std::string temp = "";
+
+		for (int j = 0; j < dimension; j++)
+		{
+			if (boolFunc[i][j]) temp += "x" + std::to_string(j + 1);
+		}
+
+		if (!temp.empty() && i > 0) boolFuncStr2 += " v " + temp;
+		else if (!temp.empty()) boolFuncStr2 += temp;
+	}
+
 	// reduce monotone Boolean function
-	// check if there is a difference of only 1 in the statements of the function, 
-	// then determine which statement is minimal (less attributes)
+	// check if the absolute value of two difference clauses Hamming norms are equal to the difference of the vectors
+	// difference, as in, how many attributes differe from each other
+	// then, determine which statement is minimal (less attributes)
 	for (size_t i = 0; i < boolFunc.size() - 1; i++)
 	{
 		for (size_t j = i + 1; j < boolFunc.size(); j++)
@@ -645,7 +698,7 @@ int main()
 				right_hamming_norm += boolFunc[j][k];
 			}
 
-			if (difference == 1)
+			if (abs(left_hamming_norm - right_hamming_norm) == difference)
 			{
 				if (left_hamming_norm < right_hamming_norm)
 				{
@@ -677,7 +730,7 @@ int main()
 		else if (!temp.empty()) boolFuncStr += temp;
 	}
 
-	// print vectors and monotone Boolean Function
+	// print vectors and monotone Boolean Function to the console and to a file
 	const char separator = ' ';
 	const int vWidth = 10;
 	const int width = 18;
@@ -688,13 +741,39 @@ int main()
 	print("Class", vWidth, separator);
 	print("Asked", vWidth, separator);
 	print("Triple", vWidth, separator);
-	print("Used 1-1", width, separator);
-	print("Used 0-0", width, separator);
-	print("Unused 1-1", width, separator);
-	print("Unused 0-0", width, separator);
-	print("Other 1-1", width, separator);
-	print("Other 0-0", width, separator);
+	print("Expanded 1-1", width, separator);
+	print("Expanded 0-0", width, separator);
+	print("Unexpandable 1-1", width, separator);
+	print("Unexpandable 0-0", width, separator);
+	print("Prior 1-1", width, separator);
+	print("Prior 0-0", width, separator);
 	std::cout << std::endl;
+
+	std::fstream results;
+	results.open("results.csv", std::ios::out | std::ios::app);
+
+	std::string askStr = "";
+
+	for (size_t i = 0; i < orderOfAsking.size(); i += 2)
+	{
+		if (i < orderOfAsking.size() - 2) askStr += std::to_string(orderOfAsking[i]) + "." + std::to_string(orderOfAsking[i + 1]) + ", ";
+		else askStr += std::to_string(orderOfAsking[i]) + "." + std::to_string(orderOfAsking[i + 1]) + "\n";
+	}
+
+	results << "Monotone Boolean Function Reduced: " + boolFuncStr + "\n";
+	results << "Monotone Boolean Function Non-reduced: " + boolFuncStr2 + "\n";
+	results << "Order of Asking: " + askStr + "\n";
+	results << "Number" << ",";
+	results << "Vector" << ",";
+	results << "Class" << ",";
+	results << "Asked" << ",";
+	results << "Triple" << ",";
+	results << "Expanded 1-1" << ",";
+	results << "Expanded 0-0" << ",";
+	results << "Unexpandable 1-1" << ",";
+	results << "Unexpandable 0-0" << ",";
+	results << "Prior 1-1" << ",";
+	results << "Prior 0-0\n";
 
 	for (int i = 0; i < numChains; i++)
 	{
@@ -709,10 +788,12 @@ int main()
 			std::string otherZeroExpStr = "";
 
 			// data point as string
-			for (auto element: hanselChainSet[i][j].dataPoint)
+			for (int k = 0; k < dimension - 1; k++)
 			{
-				vecStr += std::to_string(element);
+				vecStr += std::to_string(hanselChainSet[i][j].dataPoint[k]) + ";";
 			}
+
+			vecStr += std::to_string(hanselChainSet[i][j].dataPoint[dimension - 1]);
 
 			// used one expansions
 			for (auto element : hanselChainSet[i][j].used_one_expansions)
@@ -762,6 +843,18 @@ int main()
 			print(otherOneExpStr, width, separator);
 			print(otherZeroExpStr, width, separator);
 			std::cout << std::endl;
+
+			results << std::to_string(i + 1) + "." + std::to_string(j + 1) + ",";
+			results << std::setfill('0') << std::setw(dimension) << vecStr << ",";
+			results << hanselChainSet[i][j]._class << ",";
+			results << hanselChainSet[i][j].asked << ",";
+			results << hanselChainSet[i][j].isTriple << ",";
+			results << usedOneExpStr << ",";
+			results << usedZeroExpStr << ",";
+			results << unusedOneExpStr << ",";
+			results << unusedZeroExpStr << ",";
+			results << otherOneExpStr << ",";
+			results << otherZeroExpStr << "\n";
 		}
 	}
 
@@ -769,6 +862,17 @@ int main()
 	print("", width, separator);
 	print("", width, separator);
 	print(questionsAsked, width, separator);
+
+	results << "\nQuestions Asked" << "," << questionsAsked << "\n";
+	results << "\nAttributes:\n";
+
+	for (auto x : attributes)
+	{
+		results << x + "\n";
+	}
+
+	results << "\n";
+	results.close();
 
 	return EXIT_SUCCESS;
 }
