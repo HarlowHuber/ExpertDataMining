@@ -1,1 +1,0 @@
-D:\.School\Work\ExpertDataMining\x64\Debug\ExpertDataMining.exe
