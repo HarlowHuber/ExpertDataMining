@@ -13,35 +13,97 @@ Supervisor: Dr. Boris Kovalerchuk
 #include <unordered_map>
 #include <iomanip>
 
+/// @brief dvector, or datapoint vector, is simply a vector with information about a datapoint
 struct dvector
 {
+	/// @brief the n-D data point to be considered as a vector
 	std::vector<int> dataPoint;
+
+	/// @brief the class or value of the dataPoint
 	int _class = -1;
-	std::vector<std::string> used_zero_expansions;
-	std::vector<std::string> used_one_expansions;
-	std::vector<std::string> unused_zero_expansions;
-	std::vector<std::string> unused_one_expansions;
-	std::vector<std::string> other_zero_expansions;	// possible expansions if the Hansel Chain ordering were to be different
-	std::vector<std::string> other_one_expansions;
+
+	/// @brief the zero-to-zero expansions that are used
+	std::vector<std::string> expandable_zero;
+
+	/// @brief the one-to-one expansions that are used
+	std::vector<std::string> expandable_one;
+
+	/// @brief zero-to-zero expansions that are impossible because the given class was not zero
+	std::vector<std::string> unexpandable_zero;
+
+	/// @brief one-to-one expansions that are impossible because the given class was not one
+	std::vector<std::string> unexpandable_one;
+
+	/// @brief possible expansions if the Hansel Chains were to be ordered differently (expansions from previous Chains)
+	std::vector<std::string> prior_zero;
+
+	/// @brief possible expansions if the Hansel Chains were to be ordered differently (expansions from previous Chains)
+	std::vector<std::string> prior_one;
+
+	/// @brief if the vector is visited
 	bool visited = false;
+
+	/// @brief if this vector was asked to the expert/user
 	bool asked = false;
-	bool isTriple = false;
+
+	/// @brief signals whether the vector contains a majority of true attributes, meaning either 50% are true or the ceiling of that
+	bool majorityFlag = false;
+
+	/// @brief this number represents the order that this question was presented to the expert/user
+	int orderOfQuestion = 0;
 };
 
+/// @brief set of Hansel Chains
+std::vector<std::vector<dvector>> hanselChainSet;
+
+/// @brief k-value for each attribute of the dataset
+std::vector<int> kv_attributes;
+
+/// @brief order of the Hansel Chains
+std::vector<int> order;
+
+/// @brief check whether each Chain has been ordered when user is manually ordering them
+std::vector<bool> chainsVisited;
+
+/// @brief the order of questions that are asked to the expert/user. Even elements are the Chain of the asked question, whereas the odd element is the vector
+std::vector<int> orderOfAsking;
+
+/// @brief the total number of questions that were asked
+int questionsAsked = 0;
+
+/// @brief the number of Hansel Chains
+int numChains;
+
+/// @brief signals whether to use the majority flag or not
+int useMajorityFlag;
+
+/// @brief first element is chain, next element is vector, next element is if that vector is visited
+std::vector<int> majorityVectors;
+
+/// @brief determine the the number of attributes (dimension) and what those attributes are
+int dimension = -1;
+
+/// @brief the name of the attributes of the datapoint
+std::vector<std::string> attributes;
+
+
+/// @brief generic printing function
+/// @tparam T 
+/// @param t 
+/// @param width the width of the output in terms of character spaces
+/// @param separator the characters to use as fillers in the output if needed to reach the specified width
 template<typename T> 
 void print(T t, const int& width, const char& separator)
 {
 	std::cout << std::left << std::setw(width) << std::setfill(separator) << t;
 }
 
-std::vector<std::vector<dvector>> hanselChainSet;	// set of Hansel Chains
-std::vector<int> kv_attributes;						// k-value for each attribute of dataset
-std::vector<int> order;								// order of the Hansel Chains
-std::vector<bool> chainsVisited;					// check whether each Chain has been ordered
-std::vector<int> orderOfAsking;
-int questionsAsked = 0;
-int useTriples;
 
+/// @brief generates a Hansel Chain from a given dimension and number
+/// @param num 
+/// @param vector_dimension 
+/// @param chain a Hansel Chain
+/// @return a Hansel Chain
 std::vector<std::vector<dvector>> genChains(int num, int vector_dimension, std::unordered_map<int, std::vector<std::vector<dvector>>> chain)
 {
 	std::unordered_map<int, std::vector<std::vector<dvector>>> chains = chain;
@@ -133,6 +195,9 @@ std::vector<std::vector<dvector>> genChains(int num, int vector_dimension, std::
 	return chainsTogether = chains.at(0);
 }
 
+
+/// @brief calculates a set of Hansel Chains from a given dimension and k-valued attributes
+/// @param vector_dimension 
 void calculateHanselChains(int vector_dimension)
 {
 	// For n dimensions, iterate through to generate chains and
@@ -182,19 +247,389 @@ void calculateHanselChains(int vector_dimension)
 	}
 }
 
+
+/// @brief asks questions based on a random sequence of "majority vectors"
+void majorityFlagQuestionsFunc()
+{
+	int trueMajority = 0;
+	int foundTrueMajority = 0;
+
+	std::cout << "Roughly how many triples will result in a value of true? (Enter 0 if that is unknown)." << std::endl;
+	std::cin >> trueMajority;
+
+	// find the "majority vectors"
+	for (int i = 0; i < numChains; i++)
+	{
+		int chainSize = (int)hanselChainSet[i].size();
+
+		for (int j = 0; j < chainSize; j++)
+		{
+			int hamming_norm = 0;
+
+			for (int k = 0; k < dimension; k++)
+			{
+				if (hanselChainSet[i][j].dataPoint[k] == 1)
+				{
+					hamming_norm++;
+				}
+			}
+
+			if (hamming_norm == ((dimension / 2) + (dimension % 2)))
+			{
+				majorityVectors.push_back(i);
+				majorityVectors.push_back(j);
+				majorityVectors.push_back(0);
+				hanselChainSet[i][j].majorityFlag = true;
+			}
+		}
+	}
+
+	srand((unsigned int)time(NULL));
+
+	// ask expert what class each triple vector belongs to
+	for (int t = 0; t < majorityVectors.size() - 1; t += 3)
+	{
+		int vector_class = -1;
+		int i = majorityVectors[t];
+		int j = majorityVectors[t + 1];
+
+		// if true triples is unknown (0), then do not ask randomly. 
+		// otherwise, pick a randoom triple
+		if (trueMajority > 0)
+		{
+			while (true)
+			{
+				int random = (rand() % ((majorityVectors.size() - 3) / 3 + 1)) * 3;
+
+				if (majorityVectors[random + 2]) continue; // skip if already visited
+
+				i = majorityVectors[random];
+				j = majorityVectors[random + 1];
+				majorityVectors[random + 2] = 1;
+				break;
+			}
+		}
+
+		// if vector has not been visited, then ask user class
+		// else, retrieve class
+		if (!hanselChainSet[i][j].visited)
+		{
+			orderOfAsking.push_back(i + 1);
+			orderOfAsking.push_back(j + 1);
+
+			std::cout << "\nEnter the class for this data point:\n";
+
+			for (int k = 0; k < dimension; k++)
+			{
+				if (hanselChainSet[i][j].dataPoint[k])
+				{
+					std::cout << attributes[k] + "\t\t\t= true (1)" << std::endl;
+				}
+				else
+				{
+					std::cout << attributes[k] + "\t\t\t= false (0)" << std::endl;
+				}
+			}
+
+			std::cout << "Class: " << std::flush;
+			std::cin >> vector_class;
+			std::cin.clear();
+			std::cin.ignore(1000, '\n');
+
+			hanselChainSet[i][j]._class = vector_class;
+			hanselChainSet[i][j].visited = true;
+			hanselChainSet[i][j].asked = true;
+			questionsAsked++;
+			hanselChainSet[i][j].orderOfQuestion = questionsAsked;
+
+			if (vector_class) foundTrueMajority++;
+		}
+
+		// expand the current vector
+		for (int k = 0; k < dimension; k++)
+		{
+			// possible expansions from successive chains for a given class
+			// triples can expand vectors from previous chains
+			if (vector_class != hanselChainSet[i][j].dataPoint[k])
+			{
+				dvector expanded;
+				expanded.dataPoint = hanselChainSet[i][j].dataPoint;
+				expanded.dataPoint[k] = vector_class;
+
+				// starting in the first chain, search for expanded vector
+				for (int hc = 0; hc < numChains; hc++)
+				{
+					for (int v = 0; v < hanselChainSet[hc].size(); v++)
+					{
+						// expand the vector and mark it as visited
+						// these are "used" expansions
+						if (expanded.dataPoint == hanselChainSet[hc][v].dataPoint && !hanselChainSet[hc][v].visited)
+						{
+							if (vector_class)
+							{
+								hanselChainSet[i][j].expandable_one.push_back(std::to_string(hc + 1) + "." + std::to_string(v + 1));
+							}
+							else
+							{
+								hanselChainSet[i][j].expandable_zero.push_back(std::to_string(hc + 1) + "." + std::to_string(v + 1));
+							}
+
+							// mark as visited and expand vector (assign class)
+							hanselChainSet[hc][v]._class = vector_class;
+							hanselChainSet[hc][v].visited = true;
+						}
+						else if (expanded.dataPoint == hanselChainSet[hc][v].dataPoint) // if vector is visited, then add to "unused" expansions
+						{
+							if (vector_class)
+							{
+								hanselChainSet[i][j].unexpandable_one.push_back(std::to_string(hc + 1) + "." + std::to_string(v + 1));
+							}
+							else
+							{
+								hanselChainSet[i][j].unexpandable_zero.push_back(std::to_string(hc + 1) + "." + std::to_string(v + 1));
+							}
+						}
+					}
+				}
+			}
+
+			// possible expansions from successive chains for the OPPOSITE of a given class
+			// these are "unexpandable"
+			// DO NOT VISIT OR ASSIGN CLASS
+			int not_vector_class = 1;
+
+			if (vector_class) not_vector_class = 0;
+
+			if (not_vector_class != hanselChainSet[i][j].dataPoint[k])
+			{
+				dvector expanded;
+				expanded.dataPoint = hanselChainSet[i][j].dataPoint;
+				expanded.dataPoint[k] = not_vector_class;
+
+				// starting in the first chain, search for expanded vector
+				for (int hc = 0; hc < numChains; hc++)
+				{
+					for (int v = 0; v < hanselChainSet[hc].size(); v++)
+					{
+						if (expanded.dataPoint == hanselChainSet[hc][v].dataPoint)
+						{
+							if (not_vector_class)
+							{
+								hanselChainSet[i][j].unexpandable_one.push_back(std::to_string(hc + 1) + "." + std::to_string(v + 1));
+							}
+							else
+							{
+								hanselChainSet[i][j].unexpandable_zero.push_back(std::to_string(hc + 1) + "." + std::to_string(v + 1));
+							}
+						}
+					}
+				}
+			}
+		}
+
+		// determine if the number of triples found is sufficient
+		if (foundTrueMajority >= (trueMajority / 2) + (trueMajority % 2)) break;
+	}
+}
+
+
+/// @brief the manual order of questions
+void manualOrderQuestionsFunc()
+{
+	for (int i = 0; i < numChains; i++)
+	{
+		int chainSize = (int)hanselChainSet[i].size();
+
+		for (int j = 0; j < chainSize; j++)
+		{
+			int vector_class = -1;
+
+			// if vector has not been visited, then ask user class
+			// else, retrieve class
+			if (!hanselChainSet[i][j].visited)
+			{
+				orderOfAsking.push_back(i + 1);
+				orderOfAsking.push_back(j + 1);
+
+				std::cout << "\nEnter the class for this data point:\n";
+
+				for (int k = 0; k < dimension; k++)
+				{
+					if (hanselChainSet[i][j].dataPoint[k])
+					{
+						std::cout << attributes[k] + "\t\t\t= true (1)" << std::endl;
+					}
+					else
+					{
+						std::cout << attributes[k] + "\t\t\t= false (0)" << std::endl;
+					}
+				}
+
+				std::cout << "Class: " << std::flush;
+				std::cin >> vector_class;
+				std::cin.clear();
+				std::cin.ignore(1000, '\n');
+
+				hanselChainSet[i][j]._class = vector_class;
+				hanselChainSet[i][j].visited = true;
+				hanselChainSet[i][j].asked = true;
+				questionsAsked++;
+				hanselChainSet[i][j].orderOfQuestion = questionsAsked;
+			}
+			else if (hanselChainSet[i][j].majorityFlag) continue;
+			else vector_class = hanselChainSet[i][j]._class;
+
+			// expand the current vector
+			for (int k = 0; k < dimension; k++)
+			{
+				// other one expansions (impossible expansions from previous chains, given a specific ordering of chains)
+				// DO NOT VISIT OR ASSIGN CLASS
+				if (1 != hanselChainSet[i][j].dataPoint[k])
+				{
+					dvector expanded;
+					expanded.dataPoint = hanselChainSet[i][j].dataPoint;
+					expanded.dataPoint[k] = 1;
+
+					// starting in the first chain, search for expanded vectors up to the current chain 
+					// not possible up to current vector because, by nature, those vectors would be 0 expansions
+					for (int hc = 0; hc < i; hc++)
+					{
+						for (int v = 0; v < hanselChainSet[hc].size(); v++)
+						{
+							// "Expand" the vector,
+							if (expanded.dataPoint == hanselChainSet[hc][v].dataPoint)
+							{
+								hanselChainSet[i][j].prior_one.push_back(std::to_string(hc + 1) + "." + std::to_string(v + 1));
+							}
+						}
+					}
+				}
+
+				// other zero expansions (impossible expansions from previous chains, given a specific ordering of chains)
+				// DO NOT VISIT OR ASSIGN CLASS
+				if (0 != hanselChainSet[i][j].dataPoint[k])
+				{
+					dvector expanded;
+					expanded.dataPoint = hanselChainSet[i][j].dataPoint;
+					expanded.dataPoint[k] = 0;
+
+					// starting in the first chain, search for expanded vectors up to the current chain
+					for (int hc = 0; hc < i; hc++)
+					{
+						for (int v = 0; v < hanselChainSet[hc].size(); v++)
+						{
+							// "Expand" the vector
+							if (expanded.dataPoint == hanselChainSet[hc][v].dataPoint)
+							{
+								hanselChainSet[i][j].prior_zero.push_back(std::to_string(hc + 1) + "." + std::to_string(v + 1));
+							}
+						}
+					}
+
+					// in the current chain, search for expanded vectors up to the current vector (0 case only)
+					for (int v = 0; v < j; v++)
+					{
+						// "Expand" the vector
+						if (expanded.dataPoint == hanselChainSet[i][v].dataPoint)
+						{
+							hanselChainSet[i][j].prior_zero.push_back(std::to_string(i + 1) + "." + std::to_string(v + 1));
+						}
+					}
+				}
+
+				// possible expansions from successive chains for a given class
+				if (vector_class != hanselChainSet[i][j].dataPoint[k])
+				{
+					dvector expanded;
+					expanded.dataPoint = hanselChainSet[i][j].dataPoint;
+					expanded.dataPoint[k] = vector_class;
+
+					// starting in the current chain, search for expanded vector
+					for (int hc = i; hc < numChains; hc++)
+					{
+						for (int v = 0; v < hanselChainSet[hc].size(); v++)
+						{
+							// expand the vector and mark it as visited
+							// these are "used" expansions
+							if (expanded.dataPoint == hanselChainSet[hc][v].dataPoint && !hanselChainSet[hc][v].visited)
+							{
+								if (vector_class)
+								{
+									hanselChainSet[i][j].expandable_one.push_back(std::to_string(hc + 1) + "." + std::to_string(v + 1));
+								}
+								else
+								{
+									hanselChainSet[i][j].expandable_zero.push_back(std::to_string(hc + 1) + "." + std::to_string(v + 1));
+								}
+
+								// mark as visited and expand vector (assign class)
+								hanselChainSet[hc][v]._class = vector_class;
+								hanselChainSet[hc][v].visited = true;
+							}
+							else if (expanded.dataPoint == hanselChainSet[hc][v].dataPoint) // if vector is visited, then add to "unused" expansions
+							{
+								if (vector_class)
+								{
+									hanselChainSet[i][j].unexpandable_one.push_back(std::to_string(hc + 1) + "." + std::to_string(v + 1));
+								}
+								else if (hc > i)
+								{
+									hanselChainSet[i][j].unexpandable_zero.push_back(std::to_string(hc + 1) + "." + std::to_string(v + 1));
+								}
+							}
+						}
+					}
+				}
+
+				// possible expansions from successive chains for the OPPOSITE of a given class
+				// these are "unused" expansions
+				// DO NOT VISIT OR ASSIGN CLASS
+				int not_vector_class = 1;
+
+				if (vector_class) not_vector_class = 0;
+
+				if (not_vector_class != hanselChainSet[i][j].dataPoint[k])
+				{
+					dvector expanded;
+					expanded.dataPoint = hanselChainSet[i][j].dataPoint;
+					expanded.dataPoint[k] = not_vector_class;
+
+					// starting in the current chain, search for expanded vector
+					for (int hc = i; hc < numChains; hc++)
+					{
+						for (int v = 0; v < hanselChainSet[hc].size(); v++)
+						{
+							if (expanded.dataPoint == hanselChainSet[hc][v].dataPoint)
+							{
+								if (not_vector_class)
+								{
+									hanselChainSet[i][j].unexpandable_one.push_back(std::to_string(hc + 1) + "." + std::to_string(v + 1));
+								}
+								else if (hc > i)
+								{
+									hanselChainSet[i][j].unexpandable_zero.push_back(std::to_string(hc + 1) + "." + std::to_string(v + 1));
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+/// @brief main function
+/// @return 
 int main()
 {
 	std::cout << "Expert Data Mining with Hansel Chains.\n" << std::endl;
-
-	// determine the the number of attributes (dimension) and what those attributes are
-	int dimension = -1;
 
 	std::cout << "How many attributes are in this dataset (what is the dimension)?" << std::endl;
 	std::cin >> dimension;
 	std::cin.clear();
 	std::cin.ignore(1000, '\n');
 
-	std::vector<std::string> attributes(dimension);
+	attributes.resize(dimension);
 	kv_attributes.resize(dimension);
 
 	// name every attribute to reduce confusion for user
@@ -217,7 +652,7 @@ int main()
 	}
 
 	calculateHanselChains(dimension);
-	int numChains = (int)hanselChainSet.size();
+	numChains = (int)hanselChainSet.size();
 	order.resize(numChains);				
 	chainsVisited.resize(numChains);
 
@@ -261,372 +696,17 @@ int main()
 		hanselChainSet[i] = tempSet[order[i]];
 	}
 
-	std::cout << "\nUse triples or manual order (1/0)?" << std::flush;
-	std::cin >> useTriples;
+	std::cout << "\nUse majority flag or manual order (1/0)?" << std::flush;
+	std::cin >> useMajorityFlag;
 
-	std::vector<int> triples;
-
-	if (useTriples)
+	if (useMajorityFlag)
 	{
-		int trueTriples = 0;
-		int foundTrueTriples = 0;
-
-		std::cout << "Roughly how many triples will result in a value of true? (Enter 0 if that is unknown)." << std::endl;
-		std::cin >> trueTriples;
-
-		// find the triples
-		for (int i = 0; i < numChains; i++)
-		{
-			int chainSize = (int)hanselChainSet[i].size();
-
-			for (int j = 0; j < chainSize; j++)
-			{
-				int hamming_norm = 0;
-
-				for (int k = 0; k < dimension; k++)
-				{
-					if (hanselChainSet[i][j].dataPoint[k] == 1)
-					{
-						hamming_norm++;
-					}
-				}
-
-				if (hamming_norm == ((dimension / 2)  + (dimension % 2)))
-				{
-					triples.push_back(i);
-					triples.push_back(j);
-					triples.push_back(0);
-					hanselChainSet[i][j].isTriple = true;
-				}
-			}
-		}
-
-		srand(time(NULL));
-
-		// ask expert what class each triple vector belongs to
-		for (int t = 0; t < triples.size() - 1; t += 3)
-		{
-			int vector_class = -1;
-			int i = triples[t];
-			int j = triples[t + 1];
-
-			if (trueTriples > 0)
-			{
-				while (true)
-				{
-					int random = (rand() % ((triples.size() - 3) / 3 + 1)) * 3;
-
-					if (triples[random + 2]) continue;
-
-					i = triples[random];
-					j = triples[random + 1];
-					triples[random + 2] = 1;
-					break;
-				}
-			}
-
-			// if vector has not been visited, then ask user class
-			// else, retrieve class
-			if (!hanselChainSet[i][j].visited)
-			{
-				orderOfAsking.push_back(i + 1);
-				orderOfAsking.push_back(j + 1);
-
-				std::cout << "\nEnter the class for this data point:\n";
-
-				for (int k = 0; k < dimension; k++)
-				{
-					if (hanselChainSet[i][j].dataPoint[k])
-					{
-						std::cout << attributes[k] + "\t\t\t= true (1)" << std::endl;
-					}
-					else
-					{
-						std::cout << attributes[k] + "\t\t\t= false (0)" << std::endl;
-					}
-				}
-
-				std::cout << "Class: " << std::flush;
-				std::cin >> vector_class;
-				std::cin.clear();
-				std::cin.ignore(1000, '\n');
-
-				hanselChainSet[i][j]._class = vector_class;
-				hanselChainSet[i][j].visited = true;
-				hanselChainSet[i][j].asked = true;
-				questionsAsked++;
-
-				if (vector_class) foundTrueTriples++;
-			}
-
-			// expand the current vector
-			for (int k = 0; k < dimension; k++)
-			{
-				// possible expansions from successive chains for a given class
-				// triples can expand vectors from previous chains
-				if (vector_class != hanselChainSet[i][j].dataPoint[k])
-				{
-					dvector expanded;
-					expanded.dataPoint = hanselChainSet[i][j].dataPoint;
-					expanded.dataPoint[k] = vector_class;
-
-					// starting in the first chain, search for expanded vector
-					for (int hc = 0; hc < numChains; hc++)
-					{
-						for (int v = 0; v < hanselChainSet[hc].size(); v++)
-						{
-							// expand the vector and mark it as visited
-							// these are "used" expansions
-							if (expanded.dataPoint == hanselChainSet[hc][v].dataPoint && !hanselChainSet[hc][v].visited)
-							{
-								if (vector_class)
-								{
-									hanselChainSet[i][j].used_one_expansions.push_back(std::to_string(hc + 1) + "." + std::to_string(v + 1));
-								}
-								else
-								{
-									hanselChainSet[i][j].used_zero_expansions.push_back(std::to_string(hc + 1) + "." + std::to_string(v + 1));
-								}
-
-								// mark as visited and expand vector (assign class)
-								hanselChainSet[hc][v]._class = vector_class;
-								hanselChainSet[hc][v].visited = true;
-							}
-							else if (expanded.dataPoint == hanselChainSet[hc][v].dataPoint) // if vector is visited, then add to "unused" expansions
-							{
-								if (vector_class)
-								{
-									hanselChainSet[i][j].unused_one_expansions.push_back(std::to_string(hc + 1) + "." + std::to_string(v + 1));
-								}
-								else 
-								{
-									hanselChainSet[i][j].unused_zero_expansions.push_back(std::to_string(hc + 1) + "." + std::to_string(v + 1));
-								}
-							}
-						}
-					}
-				}
-
-				// possible expansions from successive chains for the OPPOSITE of a given class
-				// these are "unused" expansions
-				// DO NOT VISIT OR ASSIGN CLASS
-				int not_vector_class = 1;
-
-				if (vector_class) not_vector_class = 0;
-
-				if (not_vector_class != hanselChainSet[i][j].dataPoint[k])
-				{
-					dvector expanded;
-					expanded.dataPoint = hanselChainSet[i][j].dataPoint;
-					expanded.dataPoint[k] = not_vector_class;
-
-					// starting in the first chain, search for expanded vector
-					for (int hc = 0; hc < numChains; hc++)
-					{
-						for (int v = 0; v < hanselChainSet[hc].size(); v++)
-						{
-							if (expanded.dataPoint == hanselChainSet[hc][v].dataPoint)
-							{
-								if (not_vector_class)
-								{
-									hanselChainSet[i][j].unused_one_expansions.push_back(std::to_string(hc + 1) + "." + std::to_string(v + 1));
-								}
-								else
-								{
-									hanselChainSet[i][j].unused_zero_expansions.push_back(std::to_string(hc + 1) + "." + std::to_string(v + 1));
-								}
-							}
-						}
-					}
-				}
-			}
-
-			// determine if the number of triples found is sufficient
-			if (foundTrueTriples >= (trueTriples / 2) + (trueTriples % 2)) break;
-		}
+		majorityFlagQuestionsFunc();
 	}
 
 	// not triples
 	// ask expert what class each vector in each chain belongs to
-	for (int i = 0; i < numChains; i++)
-	{
-		int chainSize = (int)hanselChainSet[i].size();
-
-		for (int j = 0; j < chainSize; j++)
-		{
-			int vector_class = -1;
-
-			// if vector has not been visited, then ask user class
-			// else, retrieve class
-			if (!hanselChainSet[i][j].visited)
-			{
-				orderOfAsking.push_back(i + 1);
-				orderOfAsking.push_back(j + 1);
-
-				std::cout << "\nEnter the class for this data point:\n";
-
-				for (int k = 0; k < dimension; k++)
-				{
-					if (hanselChainSet[i][j].dataPoint[k])
-					{
-						std::cout << attributes[k] + "\t\t\t= true (1)" << std::endl;
-					}
-					else
-					{
-						std::cout << attributes[k] + "\t\t\t= false (0)" << std::endl;
-					}
-				}
-
-				std::cout << "Class: " << std::flush;
-				std::cin >> vector_class;
-				std::cin.clear();
-				std::cin.ignore(1000, '\n');
-
-				hanselChainSet[i][j]._class = vector_class;
-				hanselChainSet[i][j].visited = true;
-				hanselChainSet[i][j].asked = true;
-				questionsAsked++;
-			}
-			else if (hanselChainSet[i][j].isTriple) continue;
-			else vector_class = hanselChainSet[i][j]._class;
-			
-			// expand the current vector
-			for (int k = 0; k < dimension; k++)
-			{
-				// other one expansions (impossible expansions from previous chains, given a specific ordering of chains)
-				// DO NOT VISIT OR ASSIGN CLASS
-				if (1 != hanselChainSet[i][j].dataPoint[k])
-				{
-					dvector expanded;
-					expanded.dataPoint = hanselChainSet[i][j].dataPoint;
-					expanded.dataPoint[k] = 1;
-
-					// starting in the first chain, search for expanded vectors up to the current chain 
-					// not possible up to current vector because, by nature, those vectors would be 0 expansions
-					for (int hc = 0; hc < i; hc++)
-					{
-						for (int v = 0; v < hanselChainSet[hc].size(); v++)
-						{
-							// "Expand" the vector,
-							if (expanded.dataPoint == hanselChainSet[hc][v].dataPoint)
-							{
-								hanselChainSet[i][j].other_one_expansions.push_back(std::to_string(hc + 1) + "." + std::to_string(v + 1));
-							}
-						}
-					}
-				}
-
-				// other zero expansions (impossible expansions from previous chains, given a specific ordering of chains)
-				// DO NOT VISIT OR ASSIGN CLASS
-				if (0 != hanselChainSet[i][j].dataPoint[k])
-				{
-					dvector expanded;
-					expanded.dataPoint = hanselChainSet[i][j].dataPoint;
-					expanded.dataPoint[k] = 0;
-
-					// starting in the first chain, search for expanded vectors up to the current chain
-					for (int hc = 0; hc < i; hc++)
-					{
-						for (int v = 0; v < hanselChainSet[hc].size(); v++)
-						{
-							// "Expand" the vector
-							if (expanded.dataPoint == hanselChainSet[hc][v].dataPoint)
-							{
-								hanselChainSet[i][j].other_zero_expansions.push_back(std::to_string(hc + 1) + "." + std::to_string(v + 1));
-							}
-						}
-					}
-
-					// in the current chain, search for expanded vectors up to the current vector (0 case only)
-					for (int v = 0; v < j; v++)
-					{
-						// "Expand" the vector
-						if (expanded.dataPoint == hanselChainSet[i][v].dataPoint)
-						{
-							hanselChainSet[i][j].other_zero_expansions.push_back(std::to_string(i + 1) + "." + std::to_string(v + 1));
-						}
-					}
-				}
-
-				// possible expansions from successive chains for a given class
-				if (vector_class != hanselChainSet[i][j].dataPoint[k])
-				{
-					dvector expanded;
-					expanded.dataPoint = hanselChainSet[i][j].dataPoint;
-					expanded.dataPoint[k] = vector_class;
-
-					// starting in the current chain, search for expanded vector
-					for (int hc = i; hc < numChains; hc++)
-					{
-						for (int v = 0; v < hanselChainSet[hc].size(); v++)
-						{
-							// expand the vector and mark it as visited
-							// these are "used" expansions
-							if (expanded.dataPoint == hanselChainSet[hc][v].dataPoint && !hanselChainSet[hc][v].visited)
-							{
-								if (vector_class)
-								{
-									hanselChainSet[i][j].used_one_expansions.push_back(std::to_string(hc + 1) + "." + std::to_string(v + 1));
-								}
-								else
-								{
-									hanselChainSet[i][j].used_zero_expansions.push_back(std::to_string(hc + 1) + "." + std::to_string(v + 1));
-								}
-
-								// mark as visited and expand vector (assign class)
-								hanselChainSet[hc][v]._class = vector_class;
-								hanselChainSet[hc][v].visited = true;
-							}
-							else if (expanded.dataPoint == hanselChainSet[hc][v].dataPoint) // if vector is visited, then add to "unused" expansions
-							{
-								if (vector_class)
-								{
-									hanselChainSet[i][j].unused_one_expansions.push_back(std::to_string(hc + 1) + "." + std::to_string(v + 1));
-								}
-								else if (hc > i)
-								{
-									hanselChainSet[i][j].unused_zero_expansions.push_back(std::to_string(hc + 1) + "." + std::to_string(v + 1));
-								}
-							}
-						}
-					}
-				}
-
-				// possible expansions from successive chains for the OPPOSITE of a given class
-				// these are "unused" expansions
-				// DO NOT VISIT OR ASSIGN CLASS
-				int not_vector_class = 1;
-
-				if (vector_class) not_vector_class = 0;
-
-				if (not_vector_class != hanselChainSet[i][j].dataPoint[k])
-				{
-					dvector expanded;
-					expanded.dataPoint = hanselChainSet[i][j].dataPoint;
-					expanded.dataPoint[k] = not_vector_class;
-
-					// starting in the current chain, search for expanded vector
-					for (int hc = i; hc < numChains; hc++)
-					{
-						for (int v = 0; v < hanselChainSet[hc].size(); v++)
-						{
-							if (expanded.dataPoint == hanselChainSet[hc][v].dataPoint)
-							{
-								if (not_vector_class)
-								{
-									hanselChainSet[i][j].unused_one_expansions.push_back(std::to_string(hc + 1) + "." + std::to_string(v + 1));
-								}
-								else if (hc > i)
-								{
-									hanselChainSet[i][j].unused_zero_expansions.push_back(std::to_string(hc + 1) + "." + std::to_string(v + 1));
-								}
-							}
-						}
-					}
-				}
-			}
-		}
-	}
+	manualOrderQuestionsFunc();
 
 	// restore monotone Boolean function
 	// iterate over every hansel chain, and check each vector for its "lower one" vector, if it has one
@@ -678,7 +758,7 @@ int main()
 		else if (!temp.empty()) boolFuncStr2 += temp;
 	}
 
-	// reduce monotone Boolean function
+	// simplify monotone Boolean function
 	// check if the absolute value of two difference clauses Hamming norms are equal to the difference of the vectors
 	// difference, as in, how many attributes differe from each other
 	// then, determine which statement is minimal (less attributes)
@@ -753,27 +833,31 @@ int main()
 	results.open("results.csv", std::ios::out | std::ios::app);
 
 	std::string askStr = "";
+	std::string answerStr = "";
 
-	for (size_t i = 0; i < orderOfAsking.size(); i += 2)
+	for (size_t i = 0; i < orderOfAsking.size() - 2; i += 2)
 	{
-		if (i < orderOfAsking.size() - 2) askStr += std::to_string(orderOfAsking[i]) + "." + std::to_string(orderOfAsking[i + 1]) + ", ";
-		else askStr += std::to_string(orderOfAsking[i]) + "." + std::to_string(orderOfAsking[i + 1]) + "\n";
+		answerStr += std::to_string(hanselChainSet[orderOfAsking[i] - 1][orderOfAsking[i + 1] - 1]._class) + ",";
+		askStr += std::to_string(orderOfAsking[i]) + "." + std::to_string(orderOfAsking[i + 1]) + ", ";
 	}
 
-	results << "Monotone Boolean Function Reduced: " + boolFuncStr + "\n";
-	results << "Monotone Boolean Function Non-reduced: " + boolFuncStr2 + "\n";
-	results << "Order of Asking: " + askStr + "\n";
+	results << "Monotone Boolean Function Simplified: " + boolFuncStr + "\n";
+	results << "Monotone Boolean Function Non-simplified:" + boolFuncStr2 + "\n";
+	results << "Order of Questions:," + askStr + "\n";
+	results << "Answers:," + answerStr + "\n";
+	results << "Total Questions: " + std::to_string(questionsAsked) + "\n\n";
 	results << "Number" << ",";
 	results << "Vector" << ",";
 	results << "Class" << ",";
 	results << "Asked" << ",";
-	results << "Triple" << ",";
+	results << "Majority Flag" << ",";
 	results << "Expanded 1-1" << ",";
 	results << "Expanded 0-0" << ",";
 	results << "Unexpandable 1-1" << ",";
 	results << "Unexpandable 0-0" << ",";
 	results << "Prior 1-1" << ",";
-	results << "Prior 0-0\n";
+	results << "Prior 0-0" << ",";
+	results << "Order of Questions\n";
 
 	for (int i = 0; i < numChains; i++)
 	{
@@ -796,37 +880,37 @@ int main()
 			vecStr += std::to_string(hanselChainSet[i][j].dataPoint[dimension - 1]);
 
 			// used one expansions
-			for (auto element : hanselChainSet[i][j].used_one_expansions)
+			for (auto element : hanselChainSet[i][j].expandable_one)
 			{
 				usedOneExpStr += element + ";";
 			}
 
 			// used zero expansions
-			for (auto element : hanselChainSet[i][j].used_zero_expansions)
+			for (auto element : hanselChainSet[i][j].expandable_zero)
 			{
 				usedZeroExpStr += element + ";";
 			}
 
 			// unused one expansions
-			for (auto element : hanselChainSet[i][j].unused_one_expansions)
+			for (auto element : hanselChainSet[i][j].unexpandable_one)
 			{
 				unusedOneExpStr += element + ";";
 			}
 
 			// unused zero expansions
-			for (auto element : hanselChainSet[i][j].unused_zero_expansions)
+			for (auto element : hanselChainSet[i][j].unexpandable_zero)
 			{
 				unusedZeroExpStr += element + ";";
 			}
 
 			// other one expansions
-			for (auto element : hanselChainSet[i][j].other_one_expansions)
+			for (auto element : hanselChainSet[i][j].prior_one)
 			{
 				otherOneExpStr += element + ";";
 			}
 
 			// other zero expansions
-			for (auto element : hanselChainSet[i][j].other_zero_expansions)
+			for (auto element : hanselChainSet[i][j].prior_zero)
 			{
 				otherZeroExpStr += element + ";";
 			}
@@ -835,7 +919,7 @@ int main()
 			print(vecStr, vWidth, separator);
 			print(hanselChainSet[i][j]._class, vWidth, separator);
 			print(hanselChainSet[i][j].asked, vWidth, separator);
-			print(hanselChainSet[i][j].isTriple, vWidth, separator);
+			print(hanselChainSet[i][j].majorityFlag, vWidth, separator);
 			print(usedOneExpStr, width, separator);
 			print(usedZeroExpStr, width, separator);
 			print(unusedOneExpStr, width, separator);
@@ -848,13 +932,22 @@ int main()
 			results << std::setfill('0') << std::setw(dimension) << vecStr << ",";
 			results << hanselChainSet[i][j]._class << ",";
 			results << hanselChainSet[i][j].asked << ",";
-			results << hanselChainSet[i][j].isTriple << ",";
+			results << hanselChainSet[i][j].majorityFlag << ",";
 			results << usedOneExpStr << ",";
 			results << usedZeroExpStr << ",";
 			results << unusedOneExpStr << ",";
 			results << unusedZeroExpStr << ",";
 			results << otherOneExpStr << ",";
-			results << otherZeroExpStr << "\n";
+			results << otherZeroExpStr << ",";
+
+			if (hanselChainSet[i][j].orderOfQuestion)
+			{
+				results << std::to_string(hanselChainSet[i][j].orderOfQuestion) + "\n";
+			}
+			else
+			{
+				results << "\n";
+			}
 		}
 	}
 
