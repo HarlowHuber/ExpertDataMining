@@ -704,16 +704,33 @@ int main()
 		majorityFlagQuestionsFunc();
 	}
 
-	// not triples
-	// ask expert what class each vector in each chain belongs to
-	manualOrderQuestionsFunc();
+	int option = 0;
+
+	switch (option)
+	{
+	case 1:
+		break;
+
+	case 2:
+		break;
+
+	case 3:
+		break;
+
+	default:
+		manualOrderQuestionsFunc();
+	}
+
 
 	// restore monotone Boolean function
-	// iterate over every hansel chain, and check each vector for its "lower one" vector, if it has one
+	// iterate over every hansel chain, and check each chain for its "lower one" vector, if it has one
 	std::vector<std::vector<int>> boolFunc;
+	bool all_zero = true;
 
 	for (int i = 0; i < hanselChainSet.size(); i++)
 	{
+		if (all_zero) break;
+
 		for (int j = 0; j < (int)hanselChainSet[i].size(); j++)
 		{
 			// first vector of class 1 is "lower one" vector
@@ -722,11 +739,13 @@ int main()
 				bool first = false;
 
 				// for every element 1 in the "lower" one vector, 
-				// that element is in a statement of the monotone boolean funciton
+				// that element is in a clause in the monotone boolean funciton
 				for (int k = 0; k < dimension; k++)
 				{
 					if (hanselChainSet[i][j].dataPoint[k] == 1) 
 					{
+						all_zero = false;
+
 						if (!first)
 						{
 							std::vector<int> temp(dimension);
@@ -760,7 +779,7 @@ int main()
 
 	// simplify monotone Boolean function
 	// check if the absolute value of two difference clauses Hamming norms are equal to the difference of the vectors
-	// difference, as in, how many attributes differe from each other
+	// difference, as in, how many attributes differ from each other
 	// then, determine which statement is minimal (less attributes)
 	for (size_t i = 0; i < boolFunc.size() - 1; i++)
 	{
