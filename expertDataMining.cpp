@@ -244,7 +244,10 @@ void majorityFlagQuestionsFunc()
 		}
 
 		// determine if the number of triples found is sufficient
-		if (trueMajority && (foundTrueMajority >= (trueMajority / 2) + (trueMajority % 2))) break;
+		if (trueMajority && (foundTrueMajority >= (trueMajority / 2) + (trueMajority % 2)))
+		{
+			break;
+		}
 	}
 }
 
@@ -439,8 +442,8 @@ void possibleExpansions(int vector_class, int i, int j, int k, int startChain)
 int askingOfQuestion(int i, int j)
 {
 	int vector_class = -1;
-	orderOfAsking.push_back(i + 1);
-	orderOfAsking.push_back(j + 1);
+	orderOfAsking.push_back(i);
+	orderOfAsking.push_back(j);
 
 	std::cout << "\nEnter the class for this data point:\n";
 
@@ -582,8 +585,9 @@ int main()
 	for (int i = 0; i < hanselChainSet.size(); i++)
 	{
 		bool all_zero = true;
+		int j;
 
-		for (int j = 0; j < (int)hanselChainSet[i].size(); j++)
+		for (j = 0; j < (int)hanselChainSet[i].size(); j++)
 		{
 			// first vector of class 1 is "lower one" vector
 			if (hanselChainSet[i][j]._class)
@@ -605,7 +609,10 @@ int main()
 							boolFunc.push_back(temp);
 							first = true;
 						}
-						else boolFunc[boolFunc.size() - 1][k] = 1;
+						else
+						{
+							boolFunc[boolFunc.size() - 1][k] = 1;
+						}
 					}
 				}
 
@@ -613,7 +620,7 @@ int main()
 			}
 		}
 
-		if (all_zero) break;
+		if (all_zero && hanselChainSet[i][--j]._class) break;
 	}
 
 	std::string boolFuncStr2 = "";
@@ -708,10 +715,10 @@ int main()
 	std::string askStr = "";
 	std::string answerStr = "";
 
-	for (size_t i = 0; i < orderOfAsking.size() - 2; i += 2)
+	for (size_t i = 0; i < orderOfAsking.size() - 1; i += 2)
 	{
-		answerStr += std::to_string(hanselChainSet[orderOfAsking[i] - 1][orderOfAsking[i + 1] - 1]._class) + ",";
-		askStr += std::to_string(orderOfAsking[i]) + "." + std::to_string(orderOfAsking[i + 1]) + ", ";
+		answerStr += std::to_string(hanselChainSet[orderOfAsking[i]][orderOfAsking[i + 1] ]._class) + ",";
+		askStr += std::to_string(orderOfAsking[i] + 1) + "." + std::to_string(orderOfAsking[i + 1] + 1) + ", ";
 	}
 
 	results << "Monotone Boolean Function Simplified: " + boolFuncStr + "\n";

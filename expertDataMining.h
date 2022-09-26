@@ -137,6 +137,3 @@ void possibleExpansions(int vector_class, int i, int j, int k, int startChain);
 /// @brief helper function that asks the user a question
 /// @return the class of the vector;
 int askingOfQuestion(int i, int j);
-
-
-
