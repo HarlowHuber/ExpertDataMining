@@ -1,23 +1,5 @@
 #include "expertDataMining.h"
 
-
-/// @brief generic printing function
-/// @tparam T 
-/// @param t 
-/// @param width the width of the output in terms of character spaces
-/// @param separator the characters to use as fillers in the output if needed to reach the specified width
-template<typename T> 
-void print(T t, const int& width, const char& separator)
-{
-	std::cout << std::left << std::setw(width) << std::setfill(separator) << t;
-}
-
-
-/// @brief generates a Hansel Chain from a given dimension and number
-/// @param num 
-/// @param vector_dimension 
-/// @param chain a Hansel Chain
-/// @return a Hansel Chain
 std::vector<std::vector<dvector>> genChains(int num, int vector_dimension, std::unordered_map<int, std::vector<std::vector<dvector>>> chain)
 {
 	std::unordered_map<int, std::vector<std::vector<dvector>>> chains = chain;
@@ -109,9 +91,7 @@ std::vector<std::vector<dvector>> genChains(int num, int vector_dimension, std::
 	return chainsTogether = chains.at(0);
 }
 
-
-/// @brief calculates a set of Hansel Chains from a given dimension and k-valued attributes
-/// @param vector_dimension 
+ 
 void calculateHanselChains(int vector_dimension)
 {
 	// For n dimensions, iterate through to generate chains and
@@ -162,10 +142,20 @@ void calculateHanselChains(int vector_dimension)
 }
 
 
-/// @brief asks questions based on a random sequence of "majority vectors."
-/// These vectors do not have "prior" expansions because they occur before any other expansion that they produce.
-/// Hence, they are not prior to any expansion except another majority vector, which is not possible because they 
-/// would have the same Hamming Norm.
+void askMajorityFlag()
+{
+	// determine whether to do majority vectors first
+	std::cout << "\nUse majority flag(1/0)?" << std::endl;
+	std::cout << "Enter:" << std::endl;
+	std::cin >> useMajorityFlag;
+
+	if (useMajorityFlag)
+	{
+		majorityFlagQuestionsFunc();
+	}
+}
+
+
 void majorityFlagQuestionsFunc()
 {
 	int trueMajority = 0;
@@ -252,8 +242,7 @@ void majorityFlagQuestionsFunc()
 }
 
 
-/// @brief the manual order of questions
-void manualOrderQuestionsFunc()
+void staticOrderQuestionsFunc()
 {
 	for (int i = 0; i < numChains; i++)
 	{
@@ -297,14 +286,66 @@ void manualOrderQuestionsFunc()
 }
 
 
-/// @brief a prior expansion is an expansion that occurs in a chain that is prior to a given vector.
-///	Hence, impossible if the order of questions is the same as the sequence of Hansel Chains (which is true 
-/// in the of this program). This means that "majority vector" questions do not have prior expansions because
-/// those questions are asked first.
-/// @param _class class of prior expansion, either 1 or 0.
-/// @param i the Hansel Chain
-/// @param j a vector in the Hansel Chain
-/// @param k an element in the vector
+void manualHanselChainOrder()
+{
+	std::cout << "\nThere are " << numChains << " Hansel Chains, labelled 1 through " << numChains << "." << std::endl;
+
+	for (int i = 0; i < numChains; i++)
+	{
+		std::string suffix;
+
+		if (i == 0) suffix = "st";
+		else if (i == 1) suffix = "nd";
+		else if (i == 2) suffix = "rd";
+		else suffix = "th";
+
+		std::cout << "\nWhat is the " << i + 1 << suffix << " Hansel Chain?";
+		std::cout << "\nEnter: " << std::flush;
+		std::cin >> order[i];
+		order[i]--;
+
+		if (order[i] == -1)
+		{
+			std::cout << "There is no chain zero. Select a different number chain." << std::endl;
+			i--;
+		}
+		else if (!chainsVisited[order[i]])
+		{
+			chainsVisited[order[i]] = true;
+		}
+		else
+		{
+			std::cout << "You already selected this chain. Pick a different chain to go next." << std::endl;
+			i--;
+		}
+
+		std::cin.clear();
+		std::cin.ignore(1000, '\n');
+	}
+
+	auto tempSet = hanselChainSet;
+
+	for (int i = 0; i < numChains; i++)
+	{
+		hanselChainSet[i] = tempSet[order[i]];
+	}
+}
+
+
+void anyVectorOrder()
+{
+	std::fstream table;
+	table.open("table.csv", std::ios::out | std::ios::app);
+
+	// write vectors to file
+
+	table.close();
+	LPCWSTR str = L"excel.exe table.csv";
+	ShellExecute(NULL, L"open", str, NULL, NULL, SW_SHOWNORMAL);
+
+	// read vectors from file
+}
+
 void priorExpansions(int _class, int i, int j, int k)
 {
 	if (_class != hanselChainSet[i][j].dataPoint[k])
@@ -322,11 +363,11 @@ void priorExpansions(int _class, int i, int j, int k)
 				// "Expand" the vector,
 				if (expanded.dataPoint == hanselChainSet[hc][v].dataPoint && _class)
 				{
-					hanselChainSet[i][j].prior_one.push_back(std::to_string(hc + 1) + "." + std::to_string(v + 1));
+					hanselChainSet[i][j].prior_one.push_back(&hanselChainSet[hc][v]);
 				}
 				else if (expanded.dataPoint == hanselChainSet[hc][v].dataPoint && !_class)
 				{
-					hanselChainSet[i][j].prior_zero.push_back(std::to_string(hc + 1) + "." + std::to_string(v + 1));
+					hanselChainSet[i][j].prior_zero.push_back(&hanselChainSet[hc][v]);
 				}
 			}
 		}
@@ -339,7 +380,7 @@ void priorExpansions(int _class, int i, int j, int k)
 				// "Expand" the vector
 				if (expanded.dataPoint == hanselChainSet[i][v].dataPoint)
 				{
-					hanselChainSet[i][j].prior_zero.push_back(std::to_string(i + 1) + "." + std::to_string(v + 1));
+					hanselChainSet[i][j].prior_zero.push_back(&hanselChainSet[i][v]);
 				}
 			}
 		}
@@ -347,15 +388,6 @@ void priorExpansions(int _class, int i, int j, int k)
 }
 
 
-/// @brief expandable expansions and unexpandable expansions
-/// Expandable expansions are expansions which are used. Unexpandable expansions are expansions which are unused 
-/// because either the vector that would have been expanded was already expanded or if the vector of origin's 
-/// class is different than that of the expansion (e.g. a vector of class 1 with an expansion of class 0).
-/// @param vector_class either 1 or 0
-/// @param i the Hansel Chain
-/// @param j a vector in the Hansel Chain
-/// @param k an element in the Hansel Chain
-/// @param startChain equal to either i for a standard ordering of questions, or 0 for majority vector questions.
 void possibleExpansions(int vector_class, int i, int j, int k, int startChain)
 {
 	// possible expansions from successive chains for a given class
@@ -376,11 +408,11 @@ void possibleExpansions(int vector_class, int i, int j, int k, int startChain)
 				{
 					if (vector_class)
 					{
-						hanselChainSet[i][j].expandable_one.push_back(std::to_string(hc + 1) + "." + std::to_string(v + 1));
+						hanselChainSet[i][j].expandable_one.push_back(&hanselChainSet[hc][v]);
 					}
 					else
 					{
-						hanselChainSet[i][j].expandable_zero.push_back(std::to_string(hc + 1) + "." + std::to_string(v + 1));
+						hanselChainSet[i][j].expandable_zero.push_back(&hanselChainSet[hc][v]);
 					}
 
 					// mark as visited and expand vector (assign class)
@@ -391,11 +423,11 @@ void possibleExpansions(int vector_class, int i, int j, int k, int startChain)
 				{
 					if (vector_class)
 					{
-						hanselChainSet[i][j].unexpandable_one.push_back(std::to_string(hc + 1) + "." + std::to_string(v + 1));
+						hanselChainSet[i][j].unexpandable_one.push_back(&hanselChainSet[hc][v]);
 					}
 					else
 					{
-						hanselChainSet[i][j].unexpandable_zero.push_back(std::to_string(hc + 1) + "." + std::to_string(v + 1));
+						hanselChainSet[i][j].unexpandable_zero.push_back(&hanselChainSet[hc][v]);
 					}
 				}
 			}
@@ -424,11 +456,11 @@ void possibleExpansions(int vector_class, int i, int j, int k, int startChain)
 				{
 					if (not_vector_class)
 					{
-						hanselChainSet[i][j].unexpandable_one.push_back(std::to_string(hc + 1) + "." + std::to_string(v + 1));
+						hanselChainSet[i][j].unexpandable_one.push_back(&hanselChainSet[hc][v]);
 					}
 					else
 					{
-						hanselChainSet[i][j].unexpandable_zero.push_back(std::to_string(hc + 1) + "." + std::to_string(v + 1));
+						hanselChainSet[i][j].unexpandable_zero.push_back(&hanselChainSet[hc][v]);
 					}
 				}
 			}
@@ -437,8 +469,6 @@ void possibleExpansions(int vector_class, int i, int j, int k, int startChain)
 }
 
 
-/// @brief helper function that asks the user a question
-/// @return the class of the vector;
 int askingOfQuestion(int i, int j)
 {
 	int vector_class = -1;
@@ -459,7 +489,7 @@ int askingOfQuestion(int i, int j)
 		}
 	}
 
-	std::cout << "Class: " << std::flush;
+	std::cout << "Enter Class: " << std::flush;
 	std::cin >> vector_class;
 	std::cin.clear();
 	std::cin.ignore(1000, '\n');
@@ -474,13 +504,39 @@ int askingOfQuestion(int i, int j)
 }
 
 
+void numberAssignment()
+{
+	for (int i = 0; i < (int)hanselChainSet.size(); i++)
+	{
+		for (int j = 0; j < (int)hanselChainSet[i].size(); j++)
+		{
+			hanselChainSet[i][j].number.first = i + 1;
+			hanselChainSet[i][j].number.second = j + 1;
+		}
+	}
+}
+
+
+/// @brief generic printing function
+/// @tparam T 
+/// @param t 
+/// @param width the width of the output in terms of character spaces
+/// @param separator the characters to use as fillers in the output if needed to reach the specified width
+template<typename T>
+void print(T t, const int& width, const char& separator)
+{
+	std::cout << std::left << std::setw(width) << std::setfill(separator) << t;
+}
+
+
 /// @brief main function
 /// @return 
 int main()
 {
 	std::cout << "Expert Data Mining with Hansel Chains.\n" << std::endl;
 
-	std::cout << "How many attributes are in this dataset (what is the dimension)?" << std::endl;
+	std::cout << "How many attributes are in this dataset (what is the dimension)?";
+	std::cout << "\nEnter: " << std::flush;
 	std::cin >> dimension;
 	std::cin.clear();
 	std::cin.ignore(1000, '\n');
@@ -491,7 +547,8 @@ int main()
 	// name every attribute to reduce confusion for user
 	for (int i = 0; i < dimension; i++)
 	{
-		std::cout << "\nWhat is the name of attribute x" + std::to_string(i + 1) << "?" << std::endl;
+		std::cout << "\nWhat is the name of attribute x" + std::to_string(i + 1) << "?";
+		std::cout << "\nEnter: " << std::flush;
 		std::cin >> attributes[i];
 		std::cin.clear();
 		std::cin.ignore(1000, '\n');
@@ -501,7 +558,8 @@ int main()
 	// THIS SIMULATION ONLY WORKS FOR K-VALUES OF 2, CURRENTLY!!!
 	for (int i = 0; i < dimension; i++)
 	{
-		std::cout << "\nWhat is the k_value of attribute " + attributes[i] + "?" << std::endl;
+		std::cout << "\nWhat is the k_value of attribute " + attributes[i] + "?";
+		std::cout << "\nEnter: " << std::flush;
 		std::cin >> kv_attributes[i];
 		std::cin.clear();
 		std::cin.ignore(1000, '\n');
@@ -513,70 +571,79 @@ int main()
 	chainsVisited.resize(numChains);
 
 	// let the user determine the order of the Hansel Chains
-	// giving the number of a chain which is the same as the current number will preserve the natural order
-	std::cout << "\nThere are " << numChains << " Hansel Chains, labelled 1 through " << numChains << "." << std::endl;
+	int option;
+	std::cout << "\nWhat order to use for the Hansel Chains?";
+	std::cout << "\n0 - Shortest Hansel Chain First";
+	std::cout << "\n1 - Longest Hansel Chain First";
+	std::cout << "\n2 - Manual Hansel Chain Order";
+	std::cout << "\n3 - Natural Order";
+	std::cout << "\n4 - Any Vector Order";
+	std::cout << "\nEnter: " << std::flush;
+	std::cin >> option;
 
-	for (int i = 0; i < numChains; i++)
+	// determine if program should be dynamic or static
+	int dynamic;
+	std::cout << "\nShould the program be dynamic (1/0)?";
+	std::cout << "\nEnter: " << std::flush;
+	std::cin >> dynamic;
+
+	if (dynamic)
 	{
-		std::string suffix;
 
-		if (i == 0) suffix = "st";
-		else if (i == 1) suffix = "nd";
-		else if (i == 2) suffix = "rd";
-		else suffix = "th";
-
-		std::cout << "\nWhat is the " << i + 1 << suffix << " Hansel Chain? " << std::endl;
-		std::cin >> order[i];
-		order[i]--;
-
-		if (order[i] == -1)
+	}
+	else
+	{
+		switch (option)
 		{
-			std::cout << "There is no chain zero. Select a different number chain." << std::endl;
-			i--;
+		// longest chain first order
+		case 1:
+			std::sort(hanselChainSet.begin(), hanselChainSet.end(),
+				[](const std::vector<dvector>& a, const std::vector<dvector>& b)
+				{
+					return a.size() > b.size();
+				});;
+			numberAssignment();
+			askMajorityFlag();
+			staticOrderQuestionsFunc();
+			break;
+
+		// manual Hansel Chain order
+		// let user order chains however they want
+		case 2:
+			manualHanselChainOrder();
+			numberAssignment();
+			askMajorityFlag();
+			staticOrderQuestionsFunc();
+			break;
+
+		// natural order
+		case 3:
+			numberAssignment();
+			askMajorityFlag();
+			staticOrderQuestionsFunc();
+			break;
+
+		// any vector order
+		case 4:
+			anyVectorOrder();
+			numberAssignment();
+			askMajorityFlag();
+			staticOrderQuestionsFunc();
+			break;
+
+			// shortest chain first order
+		default:
+			std::sort(hanselChainSet.begin(), hanselChainSet.end(), 
+				[](const std::vector<dvector>& a, const std::vector<dvector>& b)
+				{
+					return a.size() < b.size();
+				});
+			numberAssignment();
+			askMajorityFlag();
+			staticOrderQuestionsFunc();
+			break;
 		}
-		else if (!chainsVisited[order[i]]) chainsVisited[order[i]] = true;
-		else
-		{
-			std::cout << "You already selected this chain. Pick a different chain to go next." << std::endl;
-			i--;
-		}
-
-		std::cin.clear();
-		std::cin.ignore(1000, '\n');
 	}
-
-	auto tempSet = hanselChainSet;
-
-	for (int i = 0; i < numChains; i++)
-	{
-		hanselChainSet[i] = tempSet[order[i]];
-	}
-
-	std::cout << "\nUse majority flag or manual order (1/0)?" << std::flush;
-	std::cin >> useMajorityFlag;
-
-	if (useMajorityFlag)
-	{
-		majorityFlagQuestionsFunc();
-	}
-
-	int option = 0;
-
-	switch (option)
-	{
-	case 1:
-		break;
-
-	case 2:
-		break;
-
-	case 3:
-		break;
-
-	default:
-		manualOrderQuestionsFunc();
-	}
-
 
 	// restore monotone Boolean function
 	// iterate over every hansel chain, and check each chain for its "lower one" vector, if it has one
@@ -623,7 +690,7 @@ int main()
 		if (all_zero && hanselChainSet[i][--j]._class) break;
 	}
 
-	std::string boolFuncStr2 = "";
+	std::string boolFuncStrNonSimplified = "";
 
 	for (size_t i = 0; i < boolFunc.size(); i++)
 	{
@@ -634,8 +701,8 @@ int main()
 			if (boolFunc[i][j]) temp += "x" + std::to_string(j + 1);
 		}
 
-		if (!temp.empty() && i > 0) boolFuncStr2 += " v " + temp;
-		else if (!temp.empty()) boolFuncStr2 += temp;
+		if (!temp.empty() && i > 0) boolFuncStrNonSimplified += " v " + temp;
+		else if (!temp.empty()) boolFuncStrNonSimplified += temp;
 	}
 
 	// simplify monotone Boolean function
@@ -675,7 +742,7 @@ int main()
 	}
 
 	// convert Boolean function to string
-	std::string boolFuncStr = "";
+	std::string boolFuncStrSimplified = "";
 
 	for (size_t i = 0; i < boolFunc.size(); i++)
 	{
@@ -686,8 +753,8 @@ int main()
 			if (boolFunc[i][j]) temp += "x" + std::to_string(j + 1);
 		}
 
-		if (!temp.empty() && i > 0) boolFuncStr += " v " + temp;
-		else if (!temp.empty()) boolFuncStr += temp;
+		if (!temp.empty() && i > 0) boolFuncStrSimplified += " v " + temp;
+		else if (!temp.empty()) boolFuncStrSimplified += temp;
 	}
 
 	// print vectors and monotone Boolean Function to the console and to a file
@@ -695,7 +762,7 @@ int main()
 	const int vWidth = 10;
 	const int width = 18;
 
-	std::cout << "\nMonotone Boolean Function:\n" + boolFuncStr + "\n" << std::endl;
+	std::cout << "\nMonotone Boolean Function:\n" + boolFuncStrSimplified + "\n" << std::endl;
 	print("Number", vWidth, separator);
 	print("Vector", vWidth, separator);
 	print("Class", vWidth, separator);
@@ -718,38 +785,39 @@ int main()
 	for (size_t i = 0; i < orderOfAsking.size() - 1; i += 2)
 	{
 		answerStr += std::to_string(hanselChainSet[orderOfAsking[i]][orderOfAsking[i + 1] ]._class) + ",";
-		askStr += std::to_string(orderOfAsking[i] + 1) + "." + std::to_string(orderOfAsking[i + 1] + 1) + ", ";
+		askStr += std::to_string(orderOfAsking[i] + 1) + "." + std::to_string(orderOfAsking[i + 1] + 1) + ",";
 	}
 
-	results << "Monotone Boolean Function Simplified: " + boolFuncStr + "\n";
-	results << "Monotone Boolean Function Non-simplified:" + boolFuncStr2 + "\n";
+	results << "Monotone Boolean Function Simplified: " + boolFuncStrSimplified + "\n";
+	results << "Monotone Boolean Function Non-simplified:" + boolFuncStrNonSimplified + "\n";
 	results << "Order of Questions:," + askStr + "\n";
 	results << "Answers:," + answerStr + "\n";
 	results << "Total Questions: " + std::to_string(questionsAsked) + "\n\n";
+	results << "* = Asked\n\n";
 	results << "Number" << ",";
 	results << "Vector" << ",";
+	results << "Planned Order" << ",";
+	results << "Actual Order" << ",";
 	results << "Class" << ",";
-	results << "Asked" << ",";
 	results << "Majority Flag" << ",";
 	results << "Expanded 1-1" << ",";
 	results << "Expanded 0-0" << ",";
 	results << "Unexpandable 1-1" << ",";
 	results << "Unexpandable 0-0" << ",";
 	results << "Prior 1-1" << ",";
-	results << "Prior 0-0" << ",";
-	results << "Order of Questions\n";
+	results << "Prior 0-0" << ",\n";
 
 	for (int i = 0; i < numChains; i++)
 	{
-		for (size_t j = 0; j < hanselChainSet[i].size(); j++)
+		for (int j = 0; j < (int)hanselChainSet[i].size(); j++)
 		{
 			std::string vecStr = "";
-			std::string usedOneExpStr = "";
-			std::string usedZeroExpStr = "";
-			std::string unusedOneExpStr = "";
-			std::string unusedZeroExpStr = "";
-			std::string otherOneExpStr = "";
-			std::string otherZeroExpStr = "";
+			std::string expandedOneStr = "";
+			std::string expandedZeroStr = "";
+			std::string unexpandableOneStr = "";
+			std::string unexpandableZeroStr = "";
+			std::string priorOneStr = "";
+			std::string priorZeroStr = "";
 
 			// data point as string
 			for (int k = 0; k < dimension - 1; k++)
@@ -759,40 +827,67 @@ int main()
 
 			vecStr += std::to_string(hanselChainSet[i][j].dataPoint[dimension - 1]);
 
-			// used one expansions
+			// planned order of questions
+			int n = 0;
+
+			for (int k = 0; k < i; k++)
+			{
+				if (i > 0)
+				{
+					n += (int)hanselChainSet[k].size();
+				}
+			}
+
+			n += j + 1;
+			std::string planned_order = std::to_string(n);
+
+			if (hanselChainSet[i][j].asked)
+			{
+				planned_order += "*";
+			}
+
+			// actual order
+			std::string actual_order = "";
+
+			if (hanselChainSet[i][j].orderOfQuestion)
+			{
+				actual_order += std::to_string(hanselChainSet[i][j].orderOfQuestion);
+			}
+
+			// expanded one expansions
 			for (auto element : hanselChainSet[i][j].expandable_one)
 			{
-				usedOneExpStr += element + ";";
+				expandedOneStr += std::to_string(element->number.first) + "." + std::to_string(element->number.second) + ";";
 			}
 
-			// used zero expansions
+			//expanded zero expansions
 			for (auto element : hanselChainSet[i][j].expandable_zero)
 			{
-				usedZeroExpStr += element + ";";
+				expandedZeroStr += std::to_string(element->number.first) + "." + std::to_string(element->number.second) + ";";
 			}
 
-			// unused one expansions
+			// unexpandable one expansions
 			for (auto element : hanselChainSet[i][j].unexpandable_one)
 			{
-				unusedOneExpStr += element + ";";
+				unexpandableOneStr += std::to_string(element->number.first) + "." + std::to_string(element->number.second) + ";";
 			}
 
-			// unused zero expansions
+			// unexpandable zero expansions
 			for (auto element : hanselChainSet[i][j].unexpandable_zero)
 			{
-				unusedZeroExpStr += element + ";";
+				unexpandableZeroStr += std::to_string(element->number.first) + "." + std::to_string(element->number.second) + ";";
 			}
 
-			// other one expansions
+			// prior one expansions
 			for (auto element : hanselChainSet[i][j].prior_one)
 			{
-				otherOneExpStr += element + ";";
+				priorOneStr += std::to_string(element->number.first) + "." + std::to_string(element->number.second) + ";";
 			}
 
-			// other zero expansions
+			// prior zero expansions
 			for (auto element : hanselChainSet[i][j].prior_zero)
 			{
-				otherZeroExpStr += element + ";";
+				priorZeroStr += std::to_string(element->number.first) + "." + std::to_string(element->number.second) + ";";
 			}
 
 			print(std::to_string(i + 1) + "." + std::to_string(j + 1) + ":", vWidth, separator);
@@ -800,34 +895,26 @@ int main()
 			print(hanselChainSet[i][j]._class, vWidth, separator);
 			print(hanselChainSet[i][j].asked, vWidth, separator);
 			print(hanselChainSet[i][j].majorityFlag, vWidth, separator);
-			print(usedOneExpStr, width, separator);
-			print(usedZeroExpStr, width, separator);
-			print(unusedOneExpStr, width, separator);
-			print(unusedZeroExpStr, width, separator);
-			print(otherOneExpStr, width, separator);
-			print(otherZeroExpStr, width, separator);
+			print(expandedOneStr, width, separator);
+			print(expandedZeroStr, width, separator);
+			print(unexpandableOneStr, width, separator);
+			print(unexpandableZeroStr, width, separator);
+			print(priorOneStr, width, separator);
+			print(priorZeroStr, width, separator);
 			std::cout << std::endl;
 
 			results << std::to_string(i + 1) + "." + std::to_string(j + 1) + ",";
 			results << std::setfill('0') << std::setw(dimension) << vecStr << ",";
+			results << planned_order << ",";
+			results << actual_order << ",";
 			results << hanselChainSet[i][j]._class << ",";
-			results << hanselChainSet[i][j].asked << ",";
 			results << hanselChainSet[i][j].majorityFlag << ",";
-			results << usedOneExpStr << ",";
-			results << usedZeroExpStr << ",";
-			results << unusedOneExpStr << ",";
-			results << unusedZeroExpStr << ",";
-			results << otherOneExpStr << ",";
-			results << otherZeroExpStr << ",";
-
-			if (hanselChainSet[i][j].orderOfQuestion)
-			{
-				results << std::to_string(hanselChainSet[i][j].orderOfQuestion) + "\n";
-			}
-			else
-			{
-				results << "\n";
-			}
+			results << expandedOneStr << ",";
+			results << expandedZeroStr << ",";
+			results << unexpandableOneStr << ",";
+			results << unexpandableZeroStr << ",";
+			results << priorOneStr << ",";
+			results << priorZeroStr << ",\n";
 		}
 	}
 

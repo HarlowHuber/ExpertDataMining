@@ -9,7 +9,10 @@ Supervisor: Dr. Boris Kovalerchuk
 #include <iostream>
 #include <string>
 #include <vector>
+#include <algorithm>
 #include <map>
+#include <windows.h>
+#include <shellapi.h>
 #include <unordered_map>
 #include <iomanip>
 
@@ -22,23 +25,26 @@ struct dvector
 	/// @brief the class or value of the dataPoint
 	int _class = -1;
 
+	/// @brief the index of this vector's Hansel Chain and the index of the vector in the Hansel Chain, respectively
+	std::pair<int, int> number;
+
 	/// @brief the zero-to-zero expansions that are used
-	std::vector<std::string> expandable_zero;
+	std::vector<dvector*> expandable_zero;
 
 	/// @brief the one-to-one expansions that are used
-	std::vector<std::string> expandable_one;
+	std::vector<dvector*> expandable_one;
 
 	/// @brief zero-to-zero expansions that are impossible because the given class was not zero
-	std::vector<std::string> unexpandable_zero;
+	std::vector<dvector*> unexpandable_zero;
 
 	/// @brief one-to-one expansions that are impossible because the given class was not one
-	std::vector<std::string> unexpandable_one;
+	std::vector<dvector*> unexpandable_one;
 
 	/// @brief possible expansions if the Hansel Chains were to be ordered differently (expansions from previous Chains)
-	std::vector<std::string> prior_zero;
+	std::vector<dvector*> prior_zero;
 
 	/// @brief possible expansions if the Hansel Chains were to be ordered differently (expansions from previous Chains)
-	std::vector<std::string> prior_one;
+	std::vector<dvector*> prior_one;
 
 	/// @brief if the vector is visited
 	bool visited = false;
@@ -100,6 +106,10 @@ std::vector<std::vector<dvector>> genChains(int num, int vector_dimension, std::
 void calculateHanselChains(int vector_dimension);
 
 
+/// @brief ask if majority flag should be used
+void askMajorityFlag();
+
+
 /// @brief asks questions based on a random sequence of "majority vectors."
 /// These vectors do not have "prior" expansions because they occur before any other expansion that they produce.
 /// Hence, they are not prior to any expansion except another majority vector, which is not possible because they 
@@ -108,7 +118,11 @@ void majorityFlagQuestionsFunc();
 
 
 /// @brief the manual order of questions
-void manualOrderQuestionsFunc();
+void staticOrderQuestionsFunc();
+
+
+/// @brief order the Hansel Chains manually by a given sequence of numbers
+void manualHanselChainOrder();
 
 
 /// @brief a prior expansion is an expansion that occurs in a chain that is prior to a given vector.
@@ -137,3 +151,7 @@ void possibleExpansions(int vector_class, int i, int j, int k, int startChain);
 /// @brief helper function that asks the user a question
 /// @return the class of the vector;
 int askingOfQuestion(int i, int j);
+
+
+/// @brief assign numbers to vectors
+void numberAssignment();
