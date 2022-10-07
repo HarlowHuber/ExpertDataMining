@@ -145,99 +145,162 @@ void calculateHanselChains(int vector_dimension)
 void askMajorityFlag()
 {
 	// determine whether to do majority vectors first
-	std::cout << "\nUse majority flag(1/0)?" << std::endl;
-	std::cout << "Enter:" << std::endl;
+	std::cout << "\nUse majority flag(1/0)?\n";
+	std::cout << "Enter: " << std::flush;
 	std::cin >> useMajorityFlag;
 
 	if (useMajorityFlag)
 	{
-		majorityFlagQuestionsFunc();
-	}
-}
+		int trueMajority = 0;
+		int foundTrueMajority = 0;
 
+		std::cout << "Roughly how many triples will result in a value of true? (Enter 0 if that is unknown)." << std::endl;
+		std::cin >> trueMajority;
 
-void majorityFlagQuestionsFunc()
-{
-	int trueMajority = 0;
-	int foundTrueMajority = 0;
-
-	std::cout << "Roughly how many triples will result in a value of true? (Enter 0 if that is unknown)." << std::endl;
-	std::cin >> trueMajority;
-
-	// find the "majority vectors"
-	for (int i = 0; i < numChains; i++)
-	{
-		int chainSize = (int)hanselChainSet[i].size();
-
-		for (int j = 0; j < chainSize; j++)
+		// find the "majority vectors"
+		for (int i = 0; i < numChains; i++)
 		{
-			int hamming_norm = 0;
-
-			for (int k = 0; k < dimension; k++)
+			for (int j = 0; j < (int)hanselChainSet[i].size(); j++)
 			{
-				if (hanselChainSet[i][j].dataPoint[k] == 1)
+				int hamming_norm = 0;
+
+				for (int k = 0; k < dimension; k++)
 				{
-					hamming_norm++;
+					if (hanselChainSet[i][j].dataPoint[k] == 1)
+					{
+						hamming_norm++;
+					}
+				}
+
+				if (hamming_norm == ((dimension / 2) + (dimension % 2)))
+				{
+					majorityVectors.push_back(i);
+					majorityVectors.push_back(j);
+					majorityVectors.push_back(0);
+					hanselChainSet[i][j].majorityFlag = true;
+					hanselChainSet[i][j].plannedQueryOrder = questionOrder;
+					questionOrder++;
+				}
+			}
+		}
+
+		// assign the planned order to the rest of the vectors
+		for (int i = 0; i < numChains; i++)
+		{
+			for (int j = 0; j < (int)hanselChainSet[i].size(); j++)
+			{
+				if (!hanselChainSet[i][j].plannedQueryOrder)
+				{
+					hanselChainSet[i][j].plannedQueryOrder = questionOrder;
+					questionOrder++;
+				}
+			}
+		}
+
+		questionOrder = 1;
+		srand((unsigned int)time(NULL));
+		std::vector<int> trueVectorInd; // indices of successful vectors in order of Hansel Chain and vector, alternating even and odd indices
+
+		for (int t = 0; t < majorityVectors.size() - 1; t += 3)
+		{
+			int vector_class = -1;
+			int i = majorityVectors[t];
+			int j = majorityVectors[t + 1];
+
+			// if true triples is unknown (0), then do not ask randomly. 
+			// otherwise, pick a randoom triple
+			if (trueMajority > 0)
+			{
+				while (true)
+				{
+					int random = (rand() % ((majorityVectors.size() - 3) / 3 + 1)) * 3;
+
+					if (majorityVectors[random + 2]) continue; // skip if already visited
+
+					i = majorityVectors[random];
+					j = majorityVectors[random + 1];
+					majorityVectors[random + 2] = 1;
+					break;
 				}
 			}
 
-			if (hamming_norm == ((dimension / 2) + (dimension % 2)))
+			// if vector has not been visited, then ask user class
+			// else, retrieve class
+			if (!hanselChainSet[i][j].visited)
 			{
-				majorityVectors.push_back(i);
-				majorityVectors.push_back(j);
-				majorityVectors.push_back(0);
-				hanselChainSet[i][j].majorityFlag = true;
+				hanselChainSet[i][j].updatedQueryOrder = questionOrder;
+				questionOrder++;
+				vector_class = askingOfQuestion(i, j);
+
+				if (vector_class)
+				{
+					foundTrueMajority++;
+
+					// save successful location if true
+					if (dynamic)
+					{
+						trueVectorInd.push_back(i);
+						trueVectorInd.push_back(j);
+					}
+				}
 			}
-		}
-	}
 
-	srand((unsigned int)time(NULL));
-
-	// ask expert what class each triple vector belongs to
-	for (int t = 0; t < majorityVectors.size() - 1; t += 3)
-	{
-		int vector_class = -1;
-		int i = majorityVectors[t];
-		int j = majorityVectors[t + 1];
-
-		// if true triples is unknown (0), then do not ask randomly. 
-		// otherwise, pick a randoom triple
-		if (trueMajority > 0)
-		{
-			while (true)
+			// expand the current vector
+			for (int k = 0; k < dimension; k++)
 			{
-				int random = (rand() % ((majorityVectors.size() - 3) / 3 + 1)) * 3;
+				// possible expansions from successive chains for a given class from the first chain
+				possibleExpansions(vector_class, i, j, k, 0);
+			}
 
-				if (majorityVectors[random + 2]) continue; // skip if already visited
-
-				i = majorityVectors[random];
-				j = majorityVectors[random + 1];
-				majorityVectors[random + 2] = 1;
+			// determine if the number of triples found is sufficient
+			if (trueMajority && (foundTrueMajority >= (trueMajority / 2) + (trueMajority % 2)))
+			{
 				break;
 			}
 		}
 
-		// if vector has not been visited, then ask user class
-		// else, retrieve class
-		if (!hanselChainSet[i][j].visited)
+		// go to successful chains
+		if (dynamic)
 		{
-			vector_class = askingOfQuestion(i, j);
+			for (int t = 0; t < (int)trueVectorInd.size() - 1; t += 2)
+			{
+				int vector_class = -1;
 
-			if (vector_class) foundTrueMajority++;
+				int i = trueVectorInd[t];
+				int j = trueVectorInd[t + 1];
+
+				// if vector has not been visited, then ask user class
+				// else, retrieve class
+				if (!hanselChainSet[i][j].visited)
+				{
+					hanselChainSet[i][j].updatedQueryOrder = questionOrder;
+					questionOrder++;
+					vector_class = askingOfQuestion(i, j);
+				}
+
+				// expand the current vector
+				for (int k = 0; k < dimension; k++)
+				{
+					// possible expansions from successive chains for a given class from the first chain
+					// only possible expansions because these expansions occur before any other
+					possibleExpansions(vector_class, i, j, k, 0);
+				}
+			}
+		}
+	}
+	else
+	{
+		// assign planned order of questions to vectors
+		for (int i = 0; i < numChains; i++)
+		{
+			for (int j = 0; j < (int)hanselChainSet[i].size(); j++)
+			{
+				hanselChainSet[i][j].plannedQueryOrder = questionOrder;
+				questionOrder++;
+			}
 		}
 
-		// expand the current vector
-		for (int k = 0; k < dimension; k++)
-		{
-			// possible expansions from successive chains for a given class from the first chain
-			possibleExpansions(vector_class, i, j, k, 0);
-		}
-
-		// determine if the number of triples found is sufficient
-		if (trueMajority && (foundTrueMajority >= (trueMajority / 2) + (trueMajority % 2)))
-		{
-			break;
-		}
+		questionOrder = 1;
 	}
 }
 
@@ -256,6 +319,8 @@ void staticOrderQuestionsFunc()
 			// else, retrieve class
 			if (!hanselChainSet[i][j].visited)
 			{
+				hanselChainSet[i][j].updatedQueryOrder = questionOrder;
+				questionOrder++;
 				vector_class = askingOfQuestion(i, j);
 			}
 			else if (hanselChainSet[i][j].majorityFlag)
@@ -265,17 +330,111 @@ void staticOrderQuestionsFunc()
 			else
 			{
 				vector_class = hanselChainSet[i][j]._class;
+				hanselChainSet[i][j].updatedQueryOrder = questionOrder;
+				questionOrder++;
 			}
 
 			// expand the current vector
 			for (int k = 0; k < dimension; k++)
 			{
 				// other one expansions (impossible expansions from previous chains, given a specific ordering of chains)
-				// DO NOT VISIT OR ASSIGN CLASS
 				priorExpansions(1, i, j, k);
 
 				// other zero expansions (impossible expansions from previous chains, given a specific ordering of chains)
-				// DO NOT VISIT OR ASSIGN CLASS
+				priorExpansions(0, i, j, k);
+
+				// possible expansions from the current chain for the given vector and class
+				possibleExpansions(vector_class, i, j, k, i);
+			}
+		}
+	}
+}
+
+
+void dynamicOrderQuestionsFunc()
+{
+	std::vector<int> skippedVectors;
+
+	for (int i = 0; i < numChains; i++)
+	{
+		for (int j = 0; j < (int)hanselChainSet[i].size(); j++)
+		{
+			int vector_class = -1;
+
+			// if vector has not been visited, then ask user class
+			// else, retrieve class
+			if (!hanselChainSet[i][j].visited)
+			{
+				hanselChainSet[i][j].updatedQueryOrder = questionOrder;
+				questionOrder++;
+				vector_class = askingOfQuestion(i, j);
+			}
+			else if (hanselChainSet[i][j].majorityFlag)
+			{
+				continue;
+			}
+			else
+			{
+				hanselChainSet[i][j].updatedQueryOrder = questionOrder;
+				questionOrder++;
+				vector_class = hanselChainSet[i][j]._class;
+			}
+
+			// expand the current vector
+			for (int k = 0; k < dimension; k++)
+			{
+				// other one expansions (impossible expansions from previous chains, given a specific ordering of chains)
+				//priorExpansions(1, i, j, k);
+
+				// other zero expansions (impossible expansions from previous chains, given a specific ordering of chains)
+				//priorExpansions(0, i, j, k);
+
+				// possible expansions from any chain for the given vector and class
+				possibleExpansions(vector_class, i, j, k, 0);
+			}
+
+			// if vector_class = 0 and the vector is the first in the chain, 
+			// then go to the next chain in hopes that it is 1 and can expand the previous chain
+			if (!vector_class && !j)
+			{
+				skippedVectors.push_back(i);
+				break;
+			}
+		}
+	}
+
+	for (int i : skippedVectors)
+	{
+		for (int j = 1; j < (int)hanselChainSet[i].size(); j++)
+		{
+			int vector_class = -1;
+
+			// if vector has not been visited, then ask user class
+			// else, retrieve class
+			if (!hanselChainSet[i][j].visited)
+			{
+				hanselChainSet[i][j].updatedQueryOrder = questionOrder;
+				questionOrder++;
+				vector_class = askingOfQuestion(i, j);
+			}
+			else if (hanselChainSet[i][j].majorityFlag)
+			{
+				continue;
+			}
+			else
+			{
+				hanselChainSet[i][j].updatedQueryOrder = questionOrder;
+				questionOrder++;
+				vector_class = hanselChainSet[i][j]._class;
+			}
+
+			// expand the current vector
+			for (int k = 0; k < dimension; k++)
+			{
+				// other one expansions (impossible expansions from previous chains, given a specific ordering of chains)
+				priorExpansions(1, i, j, k);
+
+				// other zero expansions (impossible expansions from previous chains, given a specific ordering of chains)
 				priorExpansions(0, i, j, k);
 
 				// possible expansions from successive chains for a given class from the current chain
@@ -301,17 +460,17 @@ void manualHanselChainOrder()
 
 		std::cout << "\nWhat is the " << i + 1 << suffix << " Hansel Chain?";
 		std::cout << "\nEnter: " << std::flush;
-		std::cin >> order[i];
-		order[i]--;
+		std::cin >> hanselChainOrder[i];
+		hanselChainOrder[i]--;
 
-		if (order[i] == -1)
+		if (hanselChainOrder[i] == -1)
 		{
 			std::cout << "There is no chain zero. Select a different number chain." << std::endl;
 			i--;
 		}
-		else if (!chainsVisited[order[i]])
+		else if (!chainsVisited[hanselChainOrder[i]])
 		{
-			chainsVisited[order[i]] = true;
+			chainsVisited[hanselChainOrder[i]] = true;
 		}
 		else
 		{
@@ -327,7 +486,7 @@ void manualHanselChainOrder()
 
 	for (int i = 0; i < numChains; i++)
 	{
-		hanselChainSet[i] = tempSet[order[i]];
+		hanselChainSet[i] = tempSet[hanselChainOrder[i]];
 	}
 }
 
@@ -345,6 +504,7 @@ void anyVectorOrder()
 
 	// read vectors from file
 }
+
 
 void priorExpansions(int _class, int i, int j, int k)
 {
@@ -400,7 +560,7 @@ void possibleExpansions(int vector_class, int i, int j, int k, int startChain)
 		// starting in the current chain, search for expanded vector
 		for (int hc = startChain; hc < numChains; hc++)
 		{
-			for (int v = 0; v < hanselChainSet[hc].size(); v++)
+			for (int v = j; v < hanselChainSet[hc].size(); v++)
 			{
 				// expand the vector and mark it as visited
 				// these are "used" expansions
@@ -439,7 +599,10 @@ void possibleExpansions(int vector_class, int i, int j, int k, int startChain)
 	// DO NOT VISIT OR ASSIGN CLASS
 	int not_vector_class = 1;
 
-	if (vector_class) not_vector_class = 0;
+	if (vector_class)
+	{
+		not_vector_class = 0;
+	}
 
 	if (not_vector_class != hanselChainSet[i][j].dataPoint[k])
 	{
@@ -450,7 +613,7 @@ void possibleExpansions(int vector_class, int i, int j, int k, int startChain)
 		// starting in the current chain, search for expanded vector
 		for (int hc = startChain; hc < numChains; hc++)
 		{
-			for (int v = 0; v < hanselChainSet[hc].size(); v++)
+			for (int v = j; v < hanselChainSet[hc].size(); v++)
 			{
 				if (expanded.dataPoint == hanselChainSet[hc][v].dataPoint)
 				{
@@ -472,33 +635,50 @@ void possibleExpansions(int vector_class, int i, int j, int k, int startChain)
 int askingOfQuestion(int i, int j)
 {
 	int vector_class = -1;
-	orderOfAsking.push_back(i);
-	orderOfAsking.push_back(j);
+	bool ask = true;
 
-	std::cout << "\nEnter the class for this data point:\n";
-
-	for (int k = 0; k < dimension; k++)
+	// check if the vector contains any attribute that must be true.
+	// if not, then that vector must have a class of 0
+	for (auto k : trueAttributes)
 	{
-		if (hanselChainSet[i][j].dataPoint[k])
+		if (-1 < k && k < dimension && !hanselChainSet[i][j].dataPoint[k])
 		{
-			std::cout << attributes[k] + "\t\t\t= true (1)" << std::endl;
-		}
-		else
-		{
-			std::cout << attributes[k] + "\t\t\t= false (0)" << std::endl;
+			ask = false;
+			vector_class = 0;
+			break;
 		}
 	}
 
-	std::cout << "Enter Class: " << std::flush;
-	std::cin >> vector_class;
-	std::cin.clear();
-	std::cin.ignore(1000, '\n');
+	if (ask)
+	{
+		orderOfAskingSummary.push_back(i);
+		orderOfAskingSummary.push_back(j);
+
+		std::cout << "\nEnter the class for this data point:\n";
+
+		for (int k = 0; k < dimension; k++)
+		{
+			if (hanselChainSet[i][j].dataPoint[k])
+			{
+				std::cout << attributes[k] + "\t\t\t= true (1)" << std::endl;
+			}
+			else
+			{
+				std::cout << attributes[k] + "\t\t\t= false (0)" << std::endl;
+			}
+		}
+
+		std::cout << "Enter Class: " << std::flush;
+		std::cin >> vector_class;
+		std::cin.clear();
+		std::cin.ignore(1000, '\n');
+		questionsAsked++;
+	}
 
 	hanselChainSet[i][j]._class = vector_class;
 	hanselChainSet[i][j].visited = true;
 	hanselChainSet[i][j].asked = true;
-	questionsAsked++;
-	hanselChainSet[i][j].orderOfQuestion = questionsAsked;
+	hanselChainSet[i][j].finalQueryOrder = questionsAsked;
 
 	return vector_class;
 }
@@ -558,16 +738,17 @@ int main()
 	// THIS SIMULATION ONLY WORKS FOR K-VALUES OF 2, CURRENTLY!!!
 	for (int i = 0; i < dimension; i++)
 	{
-		std::cout << "\nWhat is the k_value of attribute " + attributes[i] + "?";
+		/*std::cout << "\nWhat is the k_value of attribute " + attributes[i] + "?";
 		std::cout << "\nEnter: " << std::flush;
 		std::cin >> kv_attributes[i];
 		std::cin.clear();
-		std::cin.ignore(1000, '\n');
+		std::cin.ignore(1000, '\n');*/
+		kv_attributes[i] = 2;
 	}
 
 	calculateHanselChains(dimension);
 	numChains = (int)hanselChainSet.size();
-	order.resize(numChains);				
+	hanselChainOrder.resize(numChains);				
 	chainsVisited.resize(numChains);
 
 	// let the user determine the order of the Hansel Chains
@@ -576,10 +757,33 @@ int main()
 	std::cout << "\n0 - Shortest Hansel Chain First";
 	std::cout << "\n1 - Longest Hansel Chain First";
 	std::cout << "\n2 - Manual Hansel Chain Order";
-	std::cout << "\n3 - Natural Order";
+	std::cout << "\n3 - Default Order";
 	std::cout << "\n4 - Any Vector Order";
 	std::cout << "\nEnter: " << std::flush;
 	std::cin >> option;
+
+	// is there any attribute which must be true for answer to be true?
+	std::cout << "\nIs there any attribute which must be true for the datapoint to be true?"
+		<< "\nEnter the number assigned to each attribute or -1 if there is no such attribute."
+		<< "\nIf there are multiple attributes, separate them with a comma.\n";
+
+	for (int i = 0; i < attributes.size(); i++)
+	{
+		std::cout << attributes[i] + " - " + std::to_string(i) + "\n";
+	}
+
+	std::cout << "Enter: " << std::flush;
+	std::string temp;
+	std::cin >> temp;
+	size_t pos = 0;
+	std::string token;
+
+	while ((pos = temp.find(",")) != std::string::npos) 
+	{
+		token = temp.substr(0, pos);
+		trueAttributes.push_back(std::stoi(token));
+		temp.erase(0, pos + 1);
+	}
 
 	// determine if program should be dynamic or static
 	int dynamic;
@@ -589,7 +793,56 @@ int main()
 
 	if (dynamic)
 	{
+		switch (option)
+		{
+			// longest chain first order
+		case 1:
+			std::sort(hanselChainSet.begin(), hanselChainSet.end(),
+				[](const std::vector<dvector>& a, const std::vector<dvector>& b)
+				{
+					return a.size() > b.size();
+				});;
+			numberAssignment();
+			askMajorityFlag();
+			dynamicOrderQuestionsFunc();
+			break;
 
+			// manual Hansel Chain order
+			// let user order chains however they want
+		case 2:
+			manualHanselChainOrder();
+			numberAssignment();
+			askMajorityFlag();
+			dynamicOrderQuestionsFunc();
+			break;
+
+			// default order
+		case 3:
+			numberAssignment();
+			askMajorityFlag();
+			dynamicOrderQuestionsFunc();
+			break;
+
+			// any vector order
+		case 4:
+			anyVectorOrder();
+			numberAssignment();
+			askMajorityFlag();
+			dynamicOrderQuestionsFunc();
+			break;
+
+			// shortest chain first order
+		default:
+			std::sort(hanselChainSet.begin(), hanselChainSet.end(),
+				[](const std::vector<dvector>& a, const std::vector<dvector>& b)
+				{
+					return a.size() < b.size();
+				});
+			numberAssignment();
+			askMajorityFlag();
+			dynamicOrderQuestionsFunc();
+			break;
+		}
 	}
 	else
 	{
@@ -616,7 +869,7 @@ int main()
 			staticOrderQuestionsFunc();
 			break;
 
-		// natural order
+		// default order
 		case 3:
 			numberAssignment();
 			askMajorityFlag();
@@ -782,10 +1035,10 @@ int main()
 	std::string askStr = "";
 	std::string answerStr = "";
 
-	for (size_t i = 0; i < orderOfAsking.size() - 1; i += 2)
+	for (size_t i = 0; i < orderOfAskingSummary.size() - 1; i += 2)
 	{
-		answerStr += std::to_string(hanselChainSet[orderOfAsking[i]][orderOfAsking[i + 1] ]._class) + ",";
-		askStr += std::to_string(orderOfAsking[i] + 1) + "." + std::to_string(orderOfAsking[i + 1] + 1) + ",";
+		answerStr += std::to_string(hanselChainSet[orderOfAskingSummary[i]][orderOfAskingSummary[i + 1] ]._class) + ",";
+		askStr += std::to_string(orderOfAskingSummary[i] + 1) + "." + std::to_string(orderOfAskingSummary[i + 1] + 1) + ",";
 	}
 
 	results << "Monotone Boolean Function Simplified: " + boolFuncStrSimplified + "\n";
@@ -793,11 +1046,11 @@ int main()
 	results << "Order of Questions:," + askStr + "\n";
 	results << "Answers:," + answerStr + "\n";
 	results << "Total Questions: " + std::to_string(questionsAsked) + "\n\n";
-	results << "* = Asked\n\n";
-	results << "Number" << ",";
+	results << "Reference Number" << ",";
 	results << "Vector" << ",";
-	results << "Planned Order" << ",";
-	results << "Actual Order" << ",";
+	results << "Planned Query Order" << ",";
+	results << "Updated Query Order,";
+	results << "Final Query Order" << ",";
 	results << "Class" << ",";
 	results << "Majority Flag" << ",";
 	results << "Expanded 1-1" << ",";
@@ -828,30 +1081,17 @@ int main()
 			vecStr += std::to_string(hanselChainSet[i][j].dataPoint[dimension - 1]);
 
 			// planned order of questions
-			int n = 0;
+			std::string plannedQueryOrder = std::to_string(hanselChainSet[i][j].plannedQueryOrder);
 
-			for (int k = 0; k < i; k++)
+			// updated order of questions
+			std::string updatedQueryOrder = std::to_string(hanselChainSet[i][j].updatedQueryOrder);
+
+			// final query order
+			std::string finalQueryOrder = "";
+
+			if (hanselChainSet[i][j].finalQueryOrder)
 			{
-				if (i > 0)
-				{
-					n += (int)hanselChainSet[k].size();
-				}
-			}
-
-			n += j + 1;
-			std::string planned_order = std::to_string(n);
-
-			if (hanselChainSet[i][j].asked)
-			{
-				planned_order += "*";
-			}
-
-			// actual order
-			std::string actual_order = "";
-
-			if (hanselChainSet[i][j].orderOfQuestion)
-			{
-				actual_order += std::to_string(hanselChainSet[i][j].orderOfQuestion);
+				finalQueryOrder += std::to_string(hanselChainSet[i][j].finalQueryOrder);
 			}
 
 			// expanded one expansions
@@ -905,8 +1145,9 @@ int main()
 
 			results << std::to_string(i + 1) + "." + std::to_string(j + 1) + ",";
 			results << std::setfill('0') << std::setw(dimension) << vecStr << ",";
-			results << planned_order << ",";
-			results << actual_order << ",";
+			results << plannedQueryOrder << ",";
+			results << updatedQueryOrder << ",";
+			results << finalQueryOrder << ",";
 			results << hanselChainSet[i][j]._class << ",";
 			results << hanselChainSet[i][j].majorityFlag << ",";
 			results << expandedOneStr << ",";

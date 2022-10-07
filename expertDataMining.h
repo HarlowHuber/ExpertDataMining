@@ -56,7 +56,13 @@ struct dvector
 	bool majorityFlag = false;
 
 	/// @brief this number represents the order that this question was presented to the expert/user
-	int orderOfQuestion = 0;
+	int finalQueryOrder = 0;
+
+	/// @brief this number represents the order after being updated due to a dynamic ordering of questions
+	int updatedQueryOrder = 0;
+
+	/// @brief this number represents the order of questions that was planned to be presented to the expert/user
+	int plannedQueryOrder = 0;
 };
 
 /// @brief set of Hansel Chains
@@ -66,22 +72,32 @@ std::vector<std::vector<dvector>> hanselChainSet;
 std::vector<int> kv_attributes;
 
 /// @brief order of the Hansel Chains
-std::vector<int> order;
+std::vector<int> hanselChainOrder;
 
 /// @brief check whether each Chain has been ordered when user is manually ordering them
 std::vector<bool> chainsVisited;
 
-/// @brief the order of questions that are asked to the expert/user. Even elements are the Chain of the asked question, whereas the odd element is the vector
-std::vector<int> orderOfAsking;
+/// @brief the order of questions that are asked to the expert/user. Even elements are the Chain of the asked question, whereas the odd element is the vector.
+/// used for the summary in the results output.
+std::vector<int> orderOfAskingSummary;
+
+/// @brief list of attributes which must be true for a datapoint/vector to be true
+std::vector<int> trueAttributes;
 
 /// @brief the total number of questions that were asked
 int questionsAsked = 0;
+
+/// @brief this number, at the time of visitation, is the number that represents the order in the sequence of questions. Used to assign planned and updated query order
+int questionOrder = 1;
 
 /// @brief the number of Hansel Chains
 int numChains;
 
 /// @brief signals whether to use the majority flag or not
 int useMajorityFlag;
+
+/// @brief signals whether to use a dynamic ordering of questions
+int dynamic;
 
 /// @brief first element is chain, next element is vector, next element is if that vector is visited
 std::vector<int> majorityVectors;
@@ -106,19 +122,20 @@ std::vector<std::vector<dvector>> genChains(int num, int vector_dimension, std::
 void calculateHanselChains(int vector_dimension);
 
 
-/// @brief ask if majority flag should be used
+/// @brief ask if majority flag should be used, and if yes, then asks questions based on a random sequence of "majority vectors."
+/// These vectors do not have "prior" expansions because they occur before any other expansion that they produce.
+/// Hence, they are not prior to any expansion except another majority vector, which is not possible because they 
+/// would have the same Hamming Norm. Also assigns planned and updated order of questions
 void askMajorityFlag();
 
 
-/// @brief asks questions based on a random sequence of "majority vectors."
-/// These vectors do not have "prior" expansions because they occur before any other expansion that they produce.
-/// Hence, they are not prior to any expansion except another majority vector, which is not possible because they 
-/// would have the same Hamming Norm.
-void majorityFlagQuestionsFunc();
-
-
-/// @brief the manual order of questions
+/// @brief the order of questions in a static pattern (the assigned order
 void staticOrderQuestionsFunc();
+
+
+/// @brief the order of questions in a dynamic pattern (wthe assigned order as default, but with dynamic capabilities)
+void dynamicOrderQuestionsFunc();
+
 
 
 /// @brief order the Hansel Chains manually by a given sequence of numbers
@@ -143,12 +160,12 @@ void priorExpansions(int _class, int i, int j, int k);
 /// @param vector_class either 1 or 0
 /// @param i the Hansel Chain
 /// @param j a vector in the Hansel Chain
-/// @param k an element in the Hansel Chain
+/// @param k an element in the vector
 /// @param startChain equal to either i for a standard ordering of questions, or 0 for majority vector questions.
 void possibleExpansions(int vector_class, int i, int j, int k, int startChain);
 
 
-/// @brief helper function that asks the user a question
+/// @brief helper function that asks the user a question. Assigns the final query order
 /// @return the class of the vector;
 int askingOfQuestion(int i, int j);
 
