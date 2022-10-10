@@ -99,6 +99,9 @@ int useMajorityFlag;
 /// @brief signals whether to use a dynamic ordering of questions
 int dynamic;
 
+/// @brief for dynamic ordering, start at the top of the chain
+int top;
+
 /// @brief first element is chain, next element is vector, next element is if that vector is visited
 std::vector<int> majorityVectors;
 
