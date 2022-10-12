@@ -132,6 +132,10 @@ void calculateHanselChains(int vector_dimension);
 void askMajorityFlag();
 
 
+/// @brief Find the majority vectors in the set of Hansel Chains
+void findMajorityVectors();
+
+
 /// @brief the order of questions in a static pattern (the assigned order
 void staticOrderQuestionsFunc();
 
