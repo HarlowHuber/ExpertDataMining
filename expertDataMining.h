@@ -93,8 +93,14 @@ int questionOrder = 1;
 /// @brief the number of Hansel Chains
 int numChains;
 
-/// @brief signals whether to use the majority flag or not
+/// @brief signals whether to use the majority flag or not. True if majority vectors are IN USE. Switches to false when majority vectors have been asked.
 int useMajorityFlag;
+
+/// @brief signals whether the majority flag WAS USED or not. Value does not change, unlike useMajorityFlag
+bool usedMajorityFlag = false;
+
+/// @brief if majority flag is used, then this states how many true majority vectors there are (user specified). A value of 0 means the number is unknown.
+int trueMajority = 0;
 
 /// @brief signals whether to use a dynamic ordering of questions
 int dynamic;

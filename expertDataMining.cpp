@@ -153,7 +153,7 @@ void askMajorityFlag()
 
 	if (useMajorityFlag)
 	{
-		int trueMajority = 0;
+		usedMajorityFlag = true;
 		int foundTrueMajority = 0;
 
 		std::cout << "Roughly how many triples will result in a value of true? (Enter 0 if that is unknown)." << std::endl;
@@ -340,10 +340,22 @@ void staticOrderQuestionsFunc()
 		for (int j = 0; j < chainSize; j++)
 		{
 			int vector_class = -1;
+			//bool planToAsk = false;
 
 			// updated order must go before actual question because its tracking the intention of the question, not whether it was asked.
-			hanselChainSet[i][j].updatedQueryOrder = questionOrder;
-			questionOrder++;
+			if (!hanselChainSet[i][j].majorityFlag || !usedMajorityFlag || !hanselChainSet[i][j].visited || !hanselChainSet[i][j].updatedQueryOrder) // used, not useMajority flag because otherwise may expand twice.
+			{
+				hanselChainSet[i][j].updatedQueryOrder = questionOrder;
+				questionOrder++;
+				//planToAsk = true;
+			}
+			// skip if vector is majority flag and usedMajorityFlag, was visited, and updatedQuery Order > 0 
+			// (if updated query order is 0, then visited (expanded), but not asked, so retrieve class and do immediete expansions)
+			// Otherwise, question may be asked.
+			else
+			{
+				continue;
+			}
 
 			// if vector has not been visited, then ask user class
 			// else, retrieve class
@@ -351,10 +363,11 @@ void staticOrderQuestionsFunc()
 			{
 				vector_class = askingOfQuestion(i, j);
 			}
-			else if (hanselChainSet[i][j].majorityFlag)
+			// majority flag, used majority flag, and vector must have NOT been planned to ask (false in the case that a vector was expanded (visited))
+			/*else if (hanselChainSet[i][j].majorityFlag && usedMajorityFlag && !planToAsk)
 			{
 				continue;
-			}
+			}*/
 			else
 			{
 				vector_class = hanselChainSet[i][j]._class;
@@ -803,7 +816,7 @@ int askingOfQuestion(int i, int j)
 
 	// check if the vector contains any attribute that must be true.
 	// if not, then that vector must have a class of 0
-	/*for (auto k : trueAttributes)
+	for (auto k : trueAttributes)
 	{
 		if (-1 < k && k < dimension && !hanselChainSet[i][j].dataPoint[k])
 		{
@@ -811,7 +824,7 @@ int askingOfQuestion(int i, int j)
 			vector_class = 0;
 			break;
 		}
-	}*/
+	}
 
 	if (ask)
 	{
@@ -891,11 +904,12 @@ int main()
 	// name every attribute to reduce confusion for user
 	for (int i = 0; i < dimension; i++)
 	{
-		std::cout << "\nWhat is the name of attribute x" + std::to_string(i + 1) << "?";
+		/*std::cout << "\nWhat is the name of attribute x" + std::to_string(i + 1) << "?";
 		std::cout << "\nEnter: " << std::flush;
 		std::cin >> attributes[i];
 		std::cin.clear();
-		std::cin.ignore(1000, '\n');
+		std::cin.ignore(1000, '\n');*/
+		attributes[i] = 'a' + i;
 	}
 
 	// ask for k-values for each attribute
@@ -931,7 +945,7 @@ int main()
 		<< "\nEnter the number assigned to each attribute or -1 if there is no such attribute."
 		<< "\nIf there are multiple attributes, separate them with a comma.\n";
 
-	for (int i = 0; i < attributes.size(); i++)
+	for (int i = 0; i < dimension; i++)
 	{
 		std::cout << attributes[i] + " - " + std::to_string(i) + "\n";
 	}
@@ -942,14 +956,24 @@ int main()
 	size_t pos = 0;
 	std::string token;
 
+	auto f = [&temp, &pos](int i)
+	{
+		if (-1 < i && i < dimension)
+		{
+			trueAttributes.push_back(i);
+		}
+
+		temp.erase(0, pos + 1);
+	};
+
 	while ((pos = temp.find(",")) != std::string::npos) 
 	{
 		token = temp.substr(0, pos);
-		trueAttributes.push_back(std::stoi(token));
-		temp.erase(0, pos + 1);
+		f(std::stoi(token));
 	}
 
-	trueAttributes.push_back(std::stoi(temp));
+	f(std::stoi(temp));
+
 
 	// determine if program should be dynamic or static
 	int dynamic;
@@ -957,7 +981,7 @@ int main()
 	std::cout << "\nEnter: " << std::flush;
 	std::cin >> dynamic;
 
-
+	// order vectors and ask questions
 	if (dynamic)
 	{
 		std::cout << "\nShould the program start at the top of the Hansel Chains? (1/0)";
@@ -1211,6 +1235,73 @@ int main()
 
 	std::fstream results;
 	results.open("results.csv", std::ios::out | std::ios::app);
+	results << "Attributes:\n";
+
+	for (int i = 0; i < dimension; i++)
+	{
+		results << attributes[i] << "," << kv_attributes[i] << "\n";
+	}
+
+	// Pilot Questions:
+	results << "\nPilot Questions:\n";
+	
+	// order
+	switch (option)
+	{
+	case 1:
+		results << "Longest Hansel Chain First\n";
+		break;
+
+	case 2:
+		results << "Manual Hansel Chain Order\n";
+		break;
+
+	case 3:
+		results << "Default Order\n";
+		break;
+
+	case 4:
+		results << "Any Vector Order\n";
+		break;
+
+	default:
+		results << "Shortest Hansel Chain First\n";
+		break;
+	}
+
+	// true attributes
+	if (trueAttributes.size() > 0)
+	{
+		results << "True Attributes:,";
+
+		for (int i = 0; i < (int)trueAttributes.size() - 1; i++)
+		{
+			results << attributes[trueAttributes[i]] << ",";
+		}
+
+		results << attributes[trueAttributes[trueAttributes.size() - 1]] << "\n";
+	}
+
+	// majority flag
+	if (usedMajorityFlag)
+	{
+		results << "Majority Flag used," << trueMajority << "\n";
+	}
+	else
+	{
+		results << "Majority Flag not used\n";
+	}
+
+	// dynamic
+	if (dynamic)
+	{
+		results << "Dynamics\n\n";
+	}
+	else
+	{
+		results << "Static\n\n";
+	}
+
 
 	std::string askStr = "";
 	std::string answerStr = "";
@@ -1344,15 +1435,7 @@ int main()
 	print("", width, separator);
 	print(questionsAsked, width, separator);
 
-	results << "\nQuestions Asked" << "," << questionsAsked << "\n";
-	results << "\nAttributes:\n";
-
-	for (auto x : attributes)
-	{
-		results << x + "\n";
-	}
-
-	results << "\n";
+	results << "\n\n";
 	results.close();
 
 	return EXIT_SUCCESS;
