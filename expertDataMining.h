@@ -142,13 +142,20 @@ void askMajorityFlag();
 void findMajorityVectors();
 
 
+/// @brief Updates the query order of the vector, then calls askingOfQuestion(), and then determines if it should be expanded or was already expanded.
+/// @param i the Hansel Chain
+/// @param j the vector in the Hansel Chain
+/// @param vector_class vector class variable to be assigned to
+/// @return true if the vector is to be expanded. False otherwise
+bool questionFunc(int i, int j, int& vector_class);
+
+
 /// @brief the order of questions in a static pattern (the assigned order
 void staticOrderQuestionsFunc();
 
 
 /// @brief the order of questions in a dynamic pattern (wthe assigned order as default, but with dynamic capabilities)
 void dynamicOrderQuestionsFunc();
-
 
 
 /// @brief order the Hansel Chains manually by a given sequence of numbers

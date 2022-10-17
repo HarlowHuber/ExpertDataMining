@@ -331,6 +331,37 @@ void findMajorityVectors()
 }
 
 
+bool questionFunc(int i, int j, int& vector_class)
+{
+	// updated order must go before actual question because its tracking the intention of the question, not whether it was asked.
+	if (!hanselChainSet[i][j].majorityFlag || !usedMajorityFlag || !hanselChainSet[i][j].visited || !hanselChainSet[i][j].updatedQueryOrder) // used, not useMajority flag because otherwise may expand twice.
+	{
+		hanselChainSet[i][j].updatedQueryOrder = questionOrder;
+		questionOrder++;
+	}
+	// skip if vector is majority flag and usedMajorityFlag, was visited, and updatedQuery Order > 0 
+	// (if updated query order is 0, then visited (expanded), but not asked, so retrieve class and do immediete expansions)
+	// Otherwise, question may be asked.
+	else
+	{
+		return true;
+	}
+
+	// if vector has not been visited, then ask user class
+	// else, retrieve class
+	if (!hanselChainSet[i][j].visited)
+	{
+		vector_class = askingOfQuestion(i, j);
+	}
+	else
+	{
+		vector_class = hanselChainSet[i][j]._class;
+	}
+
+	return false;
+}
+
+
 void staticOrderQuestionsFunc()
 {
 	for (int i = 0; i < numChains; i++)
@@ -340,37 +371,10 @@ void staticOrderQuestionsFunc()
 		for (int j = 0; j < chainSize; j++)
 		{
 			int vector_class = -1;
-			//bool planToAsk = false;
 
-			// updated order must go before actual question because its tracking the intention of the question, not whether it was asked.
-			if (!hanselChainSet[i][j].majorityFlag || !usedMajorityFlag || !hanselChainSet[i][j].visited || !hanselChainSet[i][j].updatedQueryOrder) // used, not useMajority flag because otherwise may expand twice.
-			{
-				hanselChainSet[i][j].updatedQueryOrder = questionOrder;
-				questionOrder++;
-				//planToAsk = true;
-			}
-			// skip if vector is majority flag and usedMajorityFlag, was visited, and updatedQuery Order > 0 
-			// (if updated query order is 0, then visited (expanded), but not asked, so retrieve class and do immediete expansions)
-			// Otherwise, question may be asked.
-			else
+			if (questionFunc(i, j, vector_class))
 			{
 				continue;
-			}
-
-			// if vector has not been visited, then ask user class
-			// else, retrieve class
-			if (!hanselChainSet[i][j].visited)
-			{
-				vector_class = askingOfQuestion(i, j);
-			}
-			// majority flag, used majority flag, and vector must have NOT been planned to ask (false in the case that a vector was expanded (visited))
-			/*else if (hanselChainSet[i][j].majorityFlag && usedMajorityFlag && !planToAsk)
-			{
-				continue;
-			}*/
-			else
-			{
-				vector_class = hanselChainSet[i][j]._class;
 			}
 
 			// expand the current vector
@@ -400,31 +404,18 @@ void dynamicOrderQuestionsFunc()
 		{
 			for (int j = (int)hanselChainSet[i].size() - 1; j >= 0; j--)
 			{
-				int vector_class = -1;
+				int vector_class;
 
-				// updated order must go before actual question because its tracking the intention of the question, not whether it was asked.
-				hanselChainSet[i][j].updatedQueryOrder = questionOrder;
-				questionOrder++;
-
-				// if vector has not been visited, then ask user class
-				// else, retrieve class
-				if (!hanselChainSet[i][j].visited)
-				{
-					vector_class = askingOfQuestion(i, j);
-				}
-				else if (hanselChainSet[i][j].majorityFlag)
+				if (questionFunc(i, j, vector_class))
 				{
 					continue;
-				}
-				else
-				{
-					vector_class = hanselChainSet[i][j]._class;
 				}
 
 				// expand the current vector
 				for (int k = 0; k < dimension; k++)
 				{
-					// possible expansions from any chain for the given vector and class
+					// possible expansions from any chain for the given vector and class 
+					// must include current chain if top and vector_class = 0
 					possibleExpansions(vector_class, i, j, k, 0);
 				}
 
@@ -442,25 +433,11 @@ void dynamicOrderQuestionsFunc()
 		{
 			for (int j = (int)hanselChainSet[i].size() - 2; j >= 0; j--)
 			{
-				int vector_class = -1;
+				int vector_class;
 
-				// updated order must go before actual question because its tracking the intention of the question, not whether it was asked.
-				hanselChainSet[i][j].updatedQueryOrder = questionOrder;
-				questionOrder++;
-
-				// if vector has not been visited, then ask user class
-				// else, retrieve class
-				if (!hanselChainSet[i][j].visited)
-				{
-					vector_class = askingOfQuestion(i, j);
-				}
-				else if (hanselChainSet[i][j].majorityFlag)
+				if (questionFunc(i, j, vector_class))
 				{
 					continue;
-				}
-				else
-				{
-					vector_class = hanselChainSet[i][j]._class;
 				}
 
 				// expand the current vector
@@ -484,25 +461,11 @@ void dynamicOrderQuestionsFunc()
 		{
 			for (int j = 0; j < (int)hanselChainSet[i].size(); j++)
 			{
-				int vector_class = -1;
+				int vector_class;
 
-				// updated order must go before actual question because its tracking the intention of the question, not whether it was asked.
-				hanselChainSet[i][j].updatedQueryOrder = questionOrder;
-				questionOrder++;
-
-				// if vector has not been visited, then ask user class
-				// else, retrieve class
-				if (!hanselChainSet[i][j].visited)
-				{
-					vector_class = askingOfQuestion(i, j);
-				}
-				else if (hanselChainSet[i][j].majorityFlag)
+				if (questionFunc(i, j, vector_class))
 				{
 					continue;
-				}
-				else
-				{
-					vector_class = hanselChainSet[i][j]._class;
 				}
 
 				// expand the current vector
@@ -526,7 +489,7 @@ void dynamicOrderQuestionsFunc()
 		{
 			for (int j = 1; j < (int)hanselChainSet[i].size(); j++)
 			{
-				int vector_class = -1;
+				/*int vector_class = -1;
 
 				// updated order must go before actual question because its tracking the intention of the question, not whether it was asked.
 				hanselChainSet[i][j].updatedQueryOrder = questionOrder;
@@ -545,6 +508,13 @@ void dynamicOrderQuestionsFunc()
 				else
 				{
 					vector_class = hanselChainSet[i][j]._class;
+				}*/
+
+				int vector_class;
+
+				if (questionFunc(i, j, vector_class))
+				{
+					continue;
 				}
 
 				// expand the current vector
@@ -692,7 +662,7 @@ void possibleExpansions(int vector_class, int i, int j, int k, int startChain)
 						{
 							hanselChainSet[i][j].expandable_one.push_back(&hanselChainSet[hc][v]);
 						}
-						else if (hc > i || useMajorityFlag)
+						else
 						{
 							hanselChainSet[i][j].expandable_zero.push_back(&hanselChainSet[hc][v]);
 						}
@@ -707,7 +677,7 @@ void possibleExpansions(int vector_class, int i, int j, int k, int startChain)
 						{
 							hanselChainSet[i][j].unexpandable_one.push_back(&hanselChainSet[hc][v]);
 						}
-						else if (hc > i || useMajorityFlag)
+						else
 						{
 							hanselChainSet[i][j].unexpandable_zero.push_back(&hanselChainSet[hc][v]);
 						}
@@ -726,7 +696,7 @@ void possibleExpansions(int vector_class, int i, int j, int k, int startChain)
 						{
 							hanselChainSet[i][j].expandable_one.push_back(&hanselChainSet[hc][v]);
 						}
-						else if (hc > i || useMajorityFlag)
+						else if (hc > i || useMajorityFlag || (dynamic && j == 0))
 						{
 							hanselChainSet[i][j].expandable_zero.push_back(&hanselChainSet[hc][v]);
 						}
@@ -741,7 +711,7 @@ void possibleExpansions(int vector_class, int i, int j, int k, int startChain)
 						{
 							hanselChainSet[i][j].unexpandable_one.push_back(&hanselChainSet[hc][v]);
 						}
-						else if (hc > i || useMajorityFlag)
+						else if (hc > i || useMajorityFlag || (dynamic && j == 0))
 						{
 							hanselChainSet[i][j].unexpandable_zero.push_back(&hanselChainSet[hc][v]);
 						}
@@ -780,7 +750,7 @@ void possibleExpansions(int vector_class, int i, int j, int k, int startChain)
 						{
 							hanselChainSet[i][j].unexpandable_one.push_back(&hanselChainSet[hc][v]);
 						}
-						else if (hc > i || useMajorityFlag)
+						else
 						{
 							hanselChainSet[i][j].unexpandable_zero.push_back(&hanselChainSet[hc][v]);
 						}
@@ -797,7 +767,7 @@ void possibleExpansions(int vector_class, int i, int j, int k, int startChain)
 						{
 							hanselChainSet[i][j].unexpandable_one.push_back(&hanselChainSet[hc][v]);
 						}
-						else if (hc > i || useMajorityFlag)
+						else if (hc > i || useMajorityFlag || (dynamic && j == 0)) // and j == 0
 						{
 							hanselChainSet[i][j].unexpandable_zero.push_back(&hanselChainSet[hc][v]);
 						}
@@ -976,7 +946,6 @@ int main()
 
 
 	// determine if program should be dynamic or static
-	int dynamic;
 	std::cout << "\nShould the program be dynamic (1/0)?";
 	std::cout << "\nEnter: " << std::flush;
 	std::cin >> dynamic;
@@ -1235,11 +1204,11 @@ int main()
 
 	std::fstream results;
 	results.open("results.csv", std::ios::out | std::ios::app);
-	results << "Attributes:\n";
+	results << "Attributes, k-value\n";
 
 	for (int i = 0; i < dimension; i++)
 	{
-		results << attributes[i] << "," << kv_attributes[i] << "\n";
+		results << "x" << i + 1 << "," << kv_attributes[i] << "\n";
 	}
 
 	// Pilot Questions:
@@ -1276,10 +1245,10 @@ int main()
 
 		for (int i = 0; i < (int)trueAttributes.size() - 1; i++)
 		{
-			results << attributes[trueAttributes[i]] << ",";
+			results << "x" << trueAttributes[i] + 1 << ",";
 		}
 
-		results << attributes[trueAttributes[trueAttributes.size() - 1]] << "\n";
+		results << "x" << trueAttributes[trueAttributes.size() - 1] << "\n";
 	}
 
 	// majority flag
@@ -1295,7 +1264,10 @@ int main()
 	// dynamic
 	if (dynamic)
 	{
-		results << "Dynamics\n\n";
+		results << "Dynamic";
+
+		if (top) results << "top\n\n";
+		else results << "bottom\n\n";
 	}
 	else
 	{
