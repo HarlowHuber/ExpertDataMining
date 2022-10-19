@@ -46,6 +46,8 @@ struct dvector
 	/// @brief possible expansions if the Hansel Chains were to be ordered differently (expansions from previous Chains)
 	std::vector<dvector*> prior_one;
 
+	dvector* expanded_by;
+
 	/// @brief if the vector is visited
 	bool visited = false;
 
@@ -101,6 +103,10 @@ bool usedMajorityFlag = false;
 
 /// @brief if majority flag is used, then this states how many true majority vectors there are (user specified). A value of 0 means the number is unknown.
 int trueMajority = 0;
+
+/// @brief indices of successful vectors in order of Hansel Chain and vector, alternating even and odd indices. Used for dynamic majority vectors.
+std::vector<int> trueVectorInd;
+
 
 /// @brief signals whether to use a dynamic ordering of questions
 int dynamic;
