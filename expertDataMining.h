@@ -46,7 +46,7 @@ struct dvector
 	/// @brief possible expansions if the Hansel Chains were to be ordered differently (expansions from previous Chains)
 	std::vector<dvector*> prior_one;
 
-	dvector* expanded_by;
+	dvector* expanded_by = NULL;
 
 	/// @brief if the vector is visited
 	bool visited = false;
@@ -60,7 +60,7 @@ struct dvector
 	/// @brief this number represents the order that this question was presented to the expert/user
 	int finalQueryOrder = 0;
 
-	/// @brief this number represents the order after being updated due to a dynamic ordering of questions
+	/// @brief this number represents the order after being updated due to a chainJump ordering of questions
 	int updatedQueryOrder = 0;
 
 	/// @brief this number represents the order of questions that was planned to be presented to the expert/user
@@ -104,14 +104,13 @@ bool usedMajorityFlag = false;
 /// @brief if majority flag is used, then this states how many true majority vectors there are (user specified). A value of 0 means the number is unknown.
 int trueMajority = 0;
 
-/// @brief indices of successful vectors in order of Hansel Chain and vector, alternating even and odd indices. Used for dynamic majority vectors.
+/// @brief indices of successful vectors in order of Hansel Chain and vector, alternating even and odd indices. Used for chainJump majority vectors.
 std::vector<int> trueVectorInd;
 
+/// @brief signals whether to use a chainJump ordering of questions
+int chainJump;
 
-/// @brief signals whether to use a dynamic ordering of questions
-int dynamic;
-
-/// @brief for dynamic ordering, start at the top of the chain
+/// @brief for chainJump ordering, start at the top of the chain
 int top;
 
 /// @brief first element is chain, next element is vector, next element is if that vector is visited
@@ -160,8 +159,14 @@ bool questionFunc(int i, int j, int& vector_class);
 void staticOrderQuestionsFunc();
 
 
-/// @brief the order of questions in a dynamic pattern (wthe assigned order as default, but with dynamic capabilities)
-void dynamicOrderQuestionsFunc();
+/// @brief Check if the index i corresponds to the Hansel Chain index of a true majority vector
+/// @param i index of a Hansel Chain
+/// @return True if the index i corresponds to the Hansel Chain index of a true majority vector
+bool chainJumpMajorityFlagHelper(int i);
+
+
+/// @brief the order of questions in a chainJump pattern (wthe assigned order as default, but with chainJump capabilities)
+void chainJumpOrderQuestionsFunc();
 
 
 /// @brief order the Hansel Chains manually by a given sequence of numbers
@@ -187,8 +192,9 @@ void priorExpansions(int _class, int i, int j, int k);
 /// @param i the Hansel Chain
 /// @param j a vector in the Hansel Chain
 /// @param k an element in the vector
+/// @param callFromSkipped true if the vector is called for a skipped vector or a successful chain when using chain jumping with majority vectors, false otherwise
 /// @param startChain equal to either i for a standard ordering of questions, or 0 for majority vector questions.
-void possibleExpansions(int vector_class, int i, int j, int k, int startChain);
+void possibleExpansions(int vector_class, int i, int j, int k, int startChain, bool callFromSkippedOrSuccessfullChains);
 
 
 /// @brief helper function that asks the user a question. Assigns the final query order
