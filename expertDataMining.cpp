@@ -1,5 +1,6 @@
 #include "expertDataMining.h"
 
+/// @brief 
 std::vector<std::vector<dvector>> genChains(int num, int vector_dimension, std::unordered_map<int, std::vector<std::vector<dvector>>> chain)
 {
 	std::unordered_map<int, std::vector<std::vector<dvector>>> chains = chain;
@@ -1019,7 +1020,7 @@ int main()
 
 
 	// determine if program should be chainJump or static
-	std::cout << "\nShould the program be chainJump (1/0)?";
+	std::cout << "\nDo you want to use chain jumping (1/0)?";
 	std::cout << "\nEnter: " << std::flush;
 	std::cin >> chainJump;
 
