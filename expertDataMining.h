@@ -28,10 +28,16 @@ struct dvector
 	/// @brief the index of this vector's Hansel Chain and the index of the vector in the Hansel Chain, respectively
 	std::pair<int, int> number;
 
-	/// @brief the zero-to-zero expansions that are used
+	/// @brief the zero-to-zero expansions that occured
+	std::vector<dvector*> expanded_zero;
+
+	/// @brief the one-to-one expansions that occured
+	std::vector<dvector*> expanded_one;
+
+	/// @brief the zero-to-zero expansions that are possible
 	std::vector<dvector*> expandable_zero;
 
-	/// @brief the one-to-one expansions that are used
+	/// @brief the one-to-one expansions that are possible
 	std::vector<dvector*> expandable_one;
 
 	/// @brief zero-to-zero expansions that are impossible because the given class was not zero
@@ -39,12 +45,6 @@ struct dvector
 
 	/// @brief one-to-one expansions that are impossible because the given class was not one
 	std::vector<dvector*> unexpandable_one;
-
-	/// @brief possible expansions if the Hansel Chains were to be ordered differently (expansions from previous Chains)
-	std::vector<dvector*> prior_zero;
-
-	/// @brief possible expansions if the Hansel Chains were to be ordered differently (expansions from previous Chains)
-	std::vector<dvector*> prior_one;
 
 	dvector* expanded_by = NULL;
 
@@ -173,17 +173,6 @@ void chainJumpOrderQuestionsFunc();
 void manualHanselChainOrder();
 
 
-/// @brief a prior expansion is an expansion that occurs in a chain that is prior to a given vector.
-///	Hence, impossible if the order of questions is the same as the sequence of Hansel Chains (which is true 
-/// in the of this program). This means that "majority vector" questions do not have prior expansions because
-/// those questions are asked first.
-/// @param _class class of prior expansion, either 1 or 0.
-/// @param i the Hansel Chain
-/// @param j a vector in the Hansel Chain
-/// @param k an element in the vector
-void priorExpansions(int _class, int i, int j, int k);
-
-
 /// @brief expandable expansions and unexpandable expansions
 /// Expandable expansions are expansions which are used. Unexpandable expansions are expansions which are unused 
 /// because either the vector that would have been expanded was already expanded or if the vector of origin's 
@@ -192,9 +181,15 @@ void priorExpansions(int _class, int i, int j, int k);
 /// @param i the Hansel Chain
 /// @param j a vector in the Hansel Chain
 /// @param k an element in the vector
-/// @param callFromSkipped true if the vector is called for a skipped vector or a successful chain when using chain jumping with majority vectors, false otherwise
 /// @param startChain equal to either i for a standard ordering of questions, or 0 for majority vector questions.
-void possibleExpansions(int vector_class, int i, int j, int k, int startChain, bool callFromSkippedOrSuccessfullChains);
+void possibleExpansions(int vector_class, int i, int j, int k, int startChain);
+
+
+/// @brief checks the possible expansions for a given vector (i, j), and expands those vectors if possible.
+/// @param vector_class 
+/// @param i the Hansel Chain
+/// @param j a vector in the Hansel Chain
+void checkExpansions(int vector_class, int i, int j);
 
 
 /// @brief helper function that asks the user a question. Assigns the final query order

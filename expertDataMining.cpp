@@ -252,12 +252,7 @@ void askMajorityFlag()
 				}
 			}
 
-			// expand the current vector
-			for (int k = 0; k < dimension; k++)
-			{
-				// possible expansions from successive chains for a given class from the first chain
-				possibleExpansions(vector_class, i, j, k, 0, false);
-			}
+			checkExpansions(vector_class, i, j);
 
 			// determine if the number of triples found is sufficient
 			if (trueMajority && (foundTrueMajority >= (trueMajority / 2) + (trueMajority % 2)))
@@ -286,13 +281,7 @@ void askMajorityFlag()
 							continue;
 						}
 
-						// expand the current vector
-						for (int k = 0; k < dimension; k++)
-						{
-							// possible expansions from successive chains for a given class from the first chain
-							// only possible expansions because these expansions occur before any other
-							possibleExpansions(vector_class, i, j, k, 0, true);
-						}
+						checkExpansions(vector_class, i, j);
 					}
 				}
 				else
@@ -304,13 +293,7 @@ void askMajorityFlag()
 							continue;
 						}
 
-						// expand the current vector
-						for (int k = 0; k < dimension; k++)
-						{
-							// possible expansions from successive chains for a given class from the first chain
-							// only possible expansions because these expansions occur before any other
-							possibleExpansions(vector_class, i, j, k, 0, true);
-						}
+						checkExpansions(vector_class, i, j);
 					}
 				}
 			}
@@ -419,18 +402,7 @@ void staticOrderQuestionsFunc()
 				continue;
 			}
 
-			// expand the current vector
-			for (int k = 0; k < dimension; k++)
-			{
-				// other one expansions (impossible expansions from previous chains, given a specific ordering of chains)
-				priorExpansions(1, i, j, k);
-
-				// other zero expansions (impossible expansions from previous chains, given a specific ordering of chains)
-				priorExpansions(0, i, j, k);
-
-				// possible expansions from the current chain for the given vector and class
-				possibleExpansions(vector_class, i, j, k, i, false);
-			}
+			checkExpansions(vector_class, i, j);
 		}
 	}
 }
@@ -473,13 +445,7 @@ void chainJumpOrderQuestionsFunc()
 					continue;
 				}
 
-				// expand the current vector
-				for (int k = 0; k < dimension; k++)
-				{
-					// possible expansions from any chain for the given vector and class 
-					// must include current chain if top and vector_class = 0
-					possibleExpansions(vector_class, i, j, k, 0, false);
-				}
+				checkExpansions(vector_class, i, j);
 
 				// if vector_class = 1 and the vector is the first in the chain, 
 				// then go to the next chain in hopes that it is 1 and can expand the previous chain
@@ -502,18 +468,7 @@ void chainJumpOrderQuestionsFunc()
 					continue;
 				}
 
-				// expand the current vector
-				for (int k = 0; k < dimension; k++)
-				{
-					// other one expansions (impossible expansions from previous chains, given a specific ordering of chains)
-					priorExpansions(1, i, j, k);
-
-					// other zero expansions (impossible expansions from previous chains, given a specific ordering of chains)
-					priorExpansions(0, i, j, k);
-
-					// possible expansions from successive chains for a given class from the current chain
-					possibleExpansions(vector_class, i, j, k, i, true);
-				}
+				checkExpansions(vector_class, i, j);
 			}
 		}
 	}
@@ -536,12 +491,7 @@ void chainJumpOrderQuestionsFunc()
 					continue;
 				}
 
-				// expand the current vector
-				for (int k = 0; k < dimension; k++)
-				{
-					// possible expansions from any chain for the given vector and class
-					possibleExpansions(vector_class, i, j, k, 0, false);
-				}
+				checkExpansions(vector_class, i, j);
 
 				// if vector_class = 0 and the vector is the first in the chain, 
 				// then go to the next chain in hopes that it is 1 and can expand the previous chain
@@ -564,18 +514,7 @@ void chainJumpOrderQuestionsFunc()
 					continue;
 				}
 
-				// expand the current vector
-				for (int k = 0; k < dimension; k++)
-				{
-					// other one expansions (impossible expansions from previous chains, given a specific ordering of chains)
-					priorExpansions(1, i, j, k);
-
-					// other zero expansions (impossible expansions from previous chains, given a specific ordering of chains)
-					priorExpansions(0, i, j, k);
-
-					// possible expansions from successive chains for a given class from the current chain
-					possibleExpansions(vector_class, i, j, k, i, true);
-				}
+				checkExpansions(vector_class, i, j);
 			}
 		}
 	}
@@ -643,55 +582,7 @@ void anyVectorOrder()
 }
 
 
-void priorExpansions(int _class, int i, int j, int k)
-{
-	if (_class != hanselChainSet[i][j].dataPoint[k])
-	{
-		dvector expanded;
-		expanded.dataPoint = hanselChainSet[i][j].dataPoint;
-		expanded.dataPoint[k] = _class;
-
-		// starting in the first chain, search for expanded vectors up to the current chain 
-		// not possible up to current vector because, by nature, those vectors would be 0 expansions
-		for (int hc = 0; hc < i; hc++)
-		{
-			for (int v = 0; v < hanselChainSet[hc].size(); v++)
-			{
-				// "Expand" the vector,
-				if (expanded.dataPoint == hanselChainSet[hc][v].dataPoint && _class)
-				{
-					hanselChainSet[i][j].prior_one.push_back(&hanselChainSet[hc][v]);
-
-					return;
-				}
-				else if (expanded.dataPoint == hanselChainSet[hc][v].dataPoint && !_class)
-				{
-					hanselChainSet[i][j].prior_zero.push_back(&hanselChainSet[hc][v]);
-
-					return;
-				}
-			}
-		}
-
-		if (!_class && !top)
-		{
-			// in the current chain, search for expanded vectors up to the current vector (0 case only)
-			for (int v = 0; v < j; v++)
-			{
-				// "Expand" the vector
-				if (expanded.dataPoint == hanselChainSet[i][v].dataPoint)
-				{
-					hanselChainSet[i][j].prior_zero.push_back(&hanselChainSet[i][v]);
-
-					return;
-				}
-			}
-		}
-	}
-}
-
-
-void possibleExpansions(int vector_class, int i, int j, int k, int startChain, bool callFromSkipped)
+void possibleExpansions(int vector_class, int i, int j, int k, int startChain)
 {
 	// possible expansions from successive chains for a given class
 	if (vector_class != hanselChainSet[i][j].dataPoint[k])
@@ -703,150 +594,67 @@ void possibleExpansions(int vector_class, int i, int j, int k, int startChain, b
 		// starting in the current chain, search for expanded vector
 		for (int hc = startChain; hc < numChains; hc++)
 		{
-			if (top)
+			for (int v = (int)hanselChainSet[hc].size() - 1; v >= 0; v--)
 			{
-				for (int v = (int)hanselChainSet[hc].size() - 1; v >= 0; v--)
+				// expand the vector and mark it as visited
+				// these are "used" expansions
+				if (expanded.dataPoint == hanselChainSet[hc][v].dataPoint && !hanselChainSet[hc][v].visited && &hanselChainSet[hc][v] != &hanselChainSet[i][j])
 				{
-					// expand the vector and mark it as visited
-					// these are "used" expansions
-					if (expanded.dataPoint == hanselChainSet[hc][v].dataPoint && !hanselChainSet[hc][v].visited && &hanselChainSet[hc][v] != &hanselChainSet[i][j])
+					if (vector_class)
 					{
-						if (vector_class)
-						{
-							hanselChainSet[i][j].expandable_one.push_back(&hanselChainSet[hc][v]);
-						}
-						else
-						{
-							hanselChainSet[i][j].expandable_zero.push_back(&hanselChainSet[hc][v]);
-						}
-
-						// mark as visited and expand vector (assign class)
-						hanselChainSet[hc][v].expanded_by = &hanselChainSet[i][j];
-						hanselChainSet[hc][v]._class = vector_class;
-						hanselChainSet[hc][v].visited = true;
-
-						return;
+						hanselChainSet[i][j].expandable_one.push_back(&hanselChainSet[hc][v]);
 					}
-					else if (expanded.dataPoint == hanselChainSet[hc][v].dataPoint && &hanselChainSet[hc][v] != &hanselChainSet[i][j]) // if vector is visited, then add to "unused" expansions
+					else
 					{
-						if (vector_class)
-						{
-							hanselChainSet[i][j].unexpandable_one.push_back(&hanselChainSet[hc][v]);
-						}
-						else
-						{
-							hanselChainSet[i][j].unexpandable_zero.push_back(&hanselChainSet[hc][v]);
-						}
-
-						return;
+						hanselChainSet[i][j].expandable_zero.push_back(&hanselChainSet[hc][v]);
 					}
+
+					return;
 				}
-			}
-			
-			// start at bottom of chain (if vector class is 0, must check if current chain is greater than given chain,
-			// or if useMajorityFlag (whiched to false when done) or if chainJump and j === 0
-			else
-			{
-				for (int v = 0; v < (int)hanselChainSet[hc].size(); v++)
+				else if (expanded.dataPoint == hanselChainSet[hc][v].dataPoint && &hanselChainSet[hc][v] != &hanselChainSet[i][j]) // if vector is visited, then add to "unused" expansions
 				{
-					// expand the vector and mark it as visited
-					// these are "used" expansions
-					if (expanded.dataPoint == hanselChainSet[hc][v].dataPoint && !hanselChainSet[hc][v].visited && &hanselChainSet[hc][v] != &hanselChainSet[i][j])
+					if (vector_class)
 					{
-						if (vector_class)
-						{
-							hanselChainSet[i][j].expandable_one.push_back(&hanselChainSet[hc][v]);
-						}
-						else if (hc > i || useMajorityFlag || (usedMajorityFlag && callFromSkipped) || (chainJump && j == 0))
-						{
-							hanselChainSet[i][j].expandable_zero.push_back(&hanselChainSet[hc][v]);
-						}
-
-						// mark as visited and expand vector (assign class)
-						hanselChainSet[hc][v].expanded_by = &hanselChainSet[i][j];
-						hanselChainSet[hc][v]._class = vector_class;
-						hanselChainSet[hc][v].visited = true;
-
-						return;
+						hanselChainSet[i][j].unexpandable_one.push_back(&hanselChainSet[hc][v]);
 					}
-					else if (expanded.dataPoint == hanselChainSet[hc][v].dataPoint && &hanselChainSet[hc][v] != &hanselChainSet[i][j]) // if vector is visited, then add to "unused" expansions
+					else
 					{
-						if (vector_class)
-						{
-							hanselChainSet[i][j].unexpandable_one.push_back(&hanselChainSet[hc][v]);
-
-							return;
-						}
-						else if (hc > i || useMajorityFlag || (usedMajorityFlag && callFromSkipped) || (chainJump && j == 0))
-						{
-							hanselChainSet[i][j].unexpandable_zero.push_back(&hanselChainSet[hc][v]);
-
-							return;
-						}
+						hanselChainSet[i][j].unexpandable_zero.push_back(&hanselChainSet[hc][v]);
 					}
+
+					return;
 				}
 			}
 		}
 	}
 
-	// possible expansions from successive chains for the OPPOSITE of a given class
-	// these are "unused" expansions
-	// DO NOT VISIT OR ASSIGN CLASS
-	int not_vector_class = 1;
+}
 
+void checkExpansions(int vector_class, int i, int j)
+{
 	if (vector_class)
 	{
-		not_vector_class = 0;
-	}
-
-	if (not_vector_class != hanselChainSet[i][j].dataPoint[k])
-	{
-		dvector expanded;
-		expanded.dataPoint = hanselChainSet[i][j].dataPoint;
-		expanded.dataPoint[k] = not_vector_class;
-
-		// starting in the current chain, search for expanded vector
-		for (int hc = startChain; hc < numChains; hc++)
+		for (auto vector : hanselChainSet[i][j].expandable_one)
 		{
-			if (top)
+			if (!vector->visited)
 			{
-				for (int v = (int)hanselChainSet[hc].size() - 1; v >= 0; v--)
-				{
-					if (expanded.dataPoint == hanselChainSet[hc][v].dataPoint && &hanselChainSet[hc][v] != &hanselChainSet[i][j])
-					{
-						if (not_vector_class)
-						{
-							hanselChainSet[i][j].unexpandable_one.push_back(&hanselChainSet[hc][v]);
-						}
-						else
-						{
-							hanselChainSet[i][j].unexpandable_zero.push_back(&hanselChainSet[hc][v]);
-						}
-
-						return;
-					}
-				}
+				hanselChainSet[i][j].expanded_one.push_back(vector);
+				vector->expanded_by = &hanselChainSet[i][j];
+				vector->_class = vector_class;
+				vector->visited = true;
 			}
-			else
+		}
+	}
+	else
+	{
+		for (auto vector : hanselChainSet[i][j].expandable_zero)
+		{
+			if (!vector->visited)
 			{
-				for (int v = 0; v < hanselChainSet[hc].size(); v++)
-				{
-					if (expanded.dataPoint == hanselChainSet[hc][v].dataPoint && &hanselChainSet[hc][v] != &hanselChainSet[i][j])
-					{
-						if (not_vector_class)
-						{
-							hanselChainSet[i][j].unexpandable_one.push_back(&hanselChainSet[hc][v]);
-
-							return;
-						}
-						else if (hc > i || useMajorityFlag || (usedMajorityFlag && callFromSkipped) || (chainJump && j == 0))
-						{
-							hanselChainSet[i][j].unexpandable_zero.push_back(&hanselChainSet[hc][v]);
-
-							return;
-						}
-					}
-				}
+				hanselChainSet[i][j].expanded_zero.push_back(vector);
+				vector->expanded_by = &hanselChainSet[i][j];
+				vector->_class = vector_class;
+				vector->visited = true;
 			}
 		}
 	}
@@ -1023,6 +831,18 @@ int main()
 	std::cout << "\nDo you want to use chain jumping (1/0)?";
 	std::cout << "\nEnter: " << std::flush;
 	std::cin >> chainJump;
+
+	for (int i = 0; i < (int)hanselChainSet.size(); i++)
+	{
+		for (int j = 0; j < (int)hanselChainSet[i].size(); j++)
+		{
+			for (int k = 0; k < dimension; k++)
+			{
+				possibleExpansions(1, i, j, k, 0);
+				possibleExpansions(0, i, j, k, 0);
+			}
+		}
+	}
 
 	// order vectors and ask questions
 	if (chainJump)
@@ -1267,13 +1087,11 @@ int main()
 	print("Vector", vWidth, separator);
 	print("Class", vWidth, separator);
 	print("Asked", vWidth, separator);
-	print("Triple", vWidth, separator);
+	print("Majority Flag", vWidth, separator);
 	print("Expanded 1-1", width, separator);
 	print("Expanded 0-0", width, separator);
 	print("Unexpandable 1-1", width, separator);
 	print("Unexpandable 0-0", width, separator);
-	print("Prior 1-1", width, separator);
-	print("Prior 0-0", width, separator);
 	std::cout << std::endl;
 
 	std::fstream results;
@@ -1376,12 +1194,11 @@ int main()
 	results << "Final Query Order" << ",";
 	results << "Class" << ",";
 	results << "Majority Flag" << ",";
+	results << "Expanded By" << ",";
 	results << "Expanded 1-1" << ",";
 	results << "Expanded 0-0" << ",";
-	results << "Unexpandable 1-1" << ",";
-	results << "Unexpandable 0-0" << ",";
-	results << "Prior 1-1" << ",";
-	results << "Prior 0-0" << ",\n";
+	results << "Expandable 1-1" << ",";
+	results << "Expandable 0-0" << ",\n";
 
 	for (int i = 0; i < numChains; i++)
 	{
@@ -1390,10 +1207,8 @@ int main()
 			std::string vecStr = "";
 			std::string expandedOneStr = "";
 			std::string expandedZeroStr = "";
-			std::string unexpandableOneStr = "";
-			std::string unexpandableZeroStr = "";
-			std::string priorOneStr = "";
-			std::string priorZeroStr = "";
+			std::string expandableOneStr = "";
+			std::string expandableZeroStr = "";
 
 			// data point as string
 			for (int k = 0; k < dimension - 1; k++)
@@ -1418,39 +1233,27 @@ int main()
 			}
 
 			// expanded one expansions
-			for (auto element : hanselChainSet[i][j].expandable_one)
+			for (auto element : hanselChainSet[i][j].expanded_one)
 			{
 				expandedOneStr += std::to_string(element->number.first) + "." + std::to_string(element->number.second) + ";";
 			}
 
 			// expanded zero expansions
-			for (auto element : hanselChainSet[i][j].expandable_zero)
+			for (auto element : hanselChainSet[i][j].expanded_zero)
 			{
 				expandedZeroStr += std::to_string(element->number.first) + "." + std::to_string(element->number.second) + ";";
 			}
 
-			// unexpandable one expansions
-			for (auto element : hanselChainSet[i][j].unexpandable_one)
+			// expandable one expansions
+			for (auto element : hanselChainSet[i][j].expandable_one)
 			{
-				unexpandableOneStr += std::to_string(element->number.first) + "." + std::to_string(element->number.second) + ";";
+				expandableOneStr += std::to_string(element->number.first) + "." + std::to_string(element->number.second) + ";";
 			}
 
-			// unexpandable zero expansions
-			for (auto element : hanselChainSet[i][j].unexpandable_zero)
+			// expandable zero expansions
+			for (auto element : hanselChainSet[i][j].expandable_zero)
 			{
-				unexpandableZeroStr += std::to_string(element->number.first) + "." + std::to_string(element->number.second) + ";";
-			}
-
-			// prior one expansions
-			for (auto element : hanselChainSet[i][j].prior_one)
-			{
-				priorOneStr += std::to_string(element->number.first) + "." + std::to_string(element->number.second) + ";";
-			}
-
-			// prior zero expansions
-			for (auto element : hanselChainSet[i][j].prior_zero)
-			{
-				priorZeroStr += std::to_string(element->number.first) + "." + std::to_string(element->number.second) + ";";
+				expandableZeroStr += std::to_string(element->number.first) + "." + std::to_string(element->number.second) + ";";
 			}
 
 			print(std::to_string(i + 1) + "." + std::to_string(j + 1) + ":", vWidth, separator);
@@ -1460,10 +1263,8 @@ int main()
 			print(hanselChainSet[i][j].majorityFlag, vWidth, separator);
 			print(expandedOneStr, width, separator);
 			print(expandedZeroStr, width, separator);
-			print(unexpandableOneStr, width, separator);
-			print(unexpandableZeroStr, width, separator);
-			print(priorOneStr, width, separator);
-			print(priorZeroStr, width, separator);
+			print(expandableOneStr, width, separator);
+			print(expandableZeroStr, width, separator);
 			std::cout << std::endl;
 
 			results << std::to_string(i + 1) + "." + std::to_string(j + 1) + ",";
@@ -1473,12 +1274,20 @@ int main()
 			results << finalQueryOrder << ",";
 			results << hanselChainSet[i][j]._class << ",";
 			results << hanselChainSet[i][j].majorityFlag << ",";
+
+			if (hanselChainSet[i][j].expanded_by)
+			{
+				results << hanselChainSet[i][j].expanded_by->number.first << "." << hanselChainSet[i][j].expanded_by->number.second << ",";
+			}
+			else
+			{
+				results << ",";
+			}
+
 			results << expandedOneStr << ",";
 			results << expandedZeroStr << ",";
-			results << unexpandableOneStr << ",";
-			results << unexpandableZeroStr << ",";
-			results << priorOneStr << ",";
-			results << priorZeroStr << ",\n";
+			results << expandableOneStr << ",";
+			results << expandableZeroStr << ",\n";
 		}
 	}
 
