@@ -1,0 +1,25 @@
+Attributes, k-value,,,,,,,,,,
+x1,2,,,,,,,,,,
+x2,2,,,,,,,,,,
+x3,2,,,,,,,,,,
+,,,,,,,,,,,
+Pilot Questions:,,,,,,,,,,,
+Shortest Hansel Chain First,,,,,,,,,,,
+Majority Flag not used,,,,,,,,,,,
+Static,,,,,,,,,,,
+,,,,,,,,,,,
+Monotone Boolean Function Simplified: x1 v x2x3,,,,,,,,,,,
+Monotone Boolean Function Non-simplified:x1x2 v x1 v x2x3,,,,,,,,,,,
+Order of Questions:,1.1,1.2,2.1,3.2,3.3,,,,,,
+Answers:,0,1,1,0,1,,,,,,
+Total Questions: 5,,,,,,,,,,,
+2x3,,,,,,,,,,,
+Reference Number,Vector,Planned Query Order,Updated Query Order,Final Query Order,Class,Majority Flag,Expanded By,Expanded 1-1,Expanded 0-0,Expandable 1-1,Expandable 0-0
+1.1,0;1;0,1,1,1,0,0,,,3.1;,1.2;3.3;,3.1;
+1.2,1;1;0,2,2,2,1,1,,3.4;,,3.4;,1.1;2.1;
+2.1,1;0;0,3,3,3,1,0,,2.2;,,1.2;2.2;,3.1;
+2.2,1;0;1,4,4,,1,1,2.1,,,3.4;,3.2;2.1;
+3.1,0;0;0,5,5,,0,0,1.1,,,2.1;1.1;3.2;,
+3.2,0;0;1,6,6,4,0,0,,,,2.2;3.3;,3.1;
+3.3,0;1;1,7,7,5,1,1,,,,3.4;,3.2;1.1;
+3.4,1;1;1,8,8,,1,0,1.2,,,,3.3;2.2;1.2;

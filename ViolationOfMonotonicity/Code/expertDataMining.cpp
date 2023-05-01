@@ -508,7 +508,7 @@ void violationOfMonotonicity()
 		fixViolationOfMonotonicityAddAttr();
 
 		std::cout << "Fixing the violation of monotonicity for that new attribute." << std::endl;
-		fixViolationOfMonotonicityClass(addNewAttributesFor[i], addNewAttributesFor[i + 1], addNewAttributesFor[i + 2], true);
+		fixViolationOfMonotonicityClass(addNewAttributesFor[i], addNewAttributesFor[i + 1], addNewAttributesFor[i + 2]);
 	}
 }
 
@@ -516,7 +516,6 @@ void violationOfMonotonicity()
 void checkViolationOfMonotonicityMethod(int i, int j)
 {
 	int vector_class = hanselChainSet[i][j]._class;
-	hanselChainSet[i][j].expanded_by = nullptr;
 
 	if (vector_class)
 	{
@@ -527,99 +526,13 @@ void checkViolationOfMonotonicityMethod(int i, int j)
 		vector_class = 1;
 	}
 
-	// check if the change needs to be fixed in the first place
-	// if the new vector class is supposed to be 1 and the vector above it is also one, then there is no violation
-	// however, we still need to check those other vectors that are not monotonically related to the changed vector
-	if (vector_class)
-	{
-		auto f1 = [&vector_class, &i, &j]()
-		{
-			// need to re-ask questions about any vectors which were expanded previously (not monotonically related anymore)
-			// in this these, since the class went from 0 to 1, we re-ask those vectors which were expanded to a class of 0
-			for (auto vector : hanselChainSet[i][j].expanded_zero)
-			{
-				vector_class = askingOfQuestion(vector->number.first - 1, vector->number.second - 1);
-
-				// if the class changed from 0 to 1 for those vectors which were re-asked due to being expanded by the source of the f-change,
-				// then, we need to fix the expansions for those vectors.
-				if (vector_class != 0)
-				{
-					fixExpansions(vector_class, vector->number.first - 1, vector->number.second - 1);
-				}
-			}
-
-			hanselChainSet[i][j].expanded_zero.clear();
-			hanselChainSet[i][j]._class = vector_class;
-		};
-
-		try
-		{
-			// if there is a vector above and the classes are equal, or if the current vector is the top
-			if (hanselChainSet[i].size() - 1 > j && vector_class == hanselChainSet[i][j + 1]._class || hanselChainSet[i].size() - 1 == j) 
-			{
-				f1();
-
-				return;
-			}
-		}
-		catch (std::exception&) // shouldn't be necessary
-		{
-			f1();
-
-			return;
-		};
-	}
-
-	// check if the change needs to be fixed in the first place
-	// if the new vector class is supposed to be 0 and the vector below it is also 0, then there is no violation
-	// however, we still need to check those other vectors that are not monotonically related to the changed vector
-	else
-	{
-		auto f2 = [&vector_class, &i, &j]()
-		{
-			// need to re-ask questions about any vectors which were expanded previously (not monotonically related anymore)
-			// in this case, since the class went from 1 to 0, were re-ask those vectors which were expanded to a class of 1
-			for (auto vector : hanselChainSet[i][j].expanded_one)
-			{
-				vector_class = askingOfQuestion(vector->number.first - 1, vector->number.second - 1);
-
-				// if the class changed from 1 to 0 for those vectors which were re-asked due to being expanded by the source of the f-change,
-				// then, we need to fix the expansions for those vectors.
-				if (vector_class != 1) 
-				{
-					fixExpansions(vector_class, vector->number.first - 1, vector->number.second - 1);
-				}
-			}
-
-			hanselChainSet[i][j].expanded_one.clear();
-			hanselChainSet[i][j]._class = vector_class;
-		};
-
-		try
-		{
-			// if there is a vector below and the classes are equal, or if the current vector is the lowest in the chain
-			if (j > 0 && vector_class == hanselChainSet[i][j - 1]._class || j == 0)
-			{
-				f2();
-
-				return;
-			}
-		}
-		catch (std::exception&) // this shouldn't be necessary
-		{
-			f2();
-
-			return;
-		};
-	}
-
 	int c;
 	std::cout << "Do you want to fix the violation by adding a new attribute to the expert dataset or by changing the class? Enter (1/0): " << std::flush;
 	std::cin >> c;
 	std::cin.clear();
 	std::cin.ignore(1000, '\n');
 
-	// if the violation of monotoncity was an vector that was asked, directly rectify it 
+	// if the violation of monotoncity was an oldVector that was asked, directly rectify it 
 	if (vector_class != hanselChainSet[i][j]._class)
 	{
 		if (c)
@@ -632,29 +545,12 @@ void checkViolationOfMonotonicityMethod(int i, int j)
 		}
 		else // find correct answer
 		{
-			std::cout << "Does the user want to preserve monotonicity? Enter (1/0): " << std::flush;
-			std::cin >> c;
-			std::cin.clear();
-			std::cin.ignore(1000, '\n');
-
-			if (c)
-			{
-				fixViolationOfMonotonicityClass(i, j, vector_class, true);
-			}
-			else
-			{
-				fixViolationOfMonotonicityClass(i, j, vector_class, false);
-			}
+			fixViolationOfMonotonicityClass(i, j, vector_class);
 		}
 	}
-
-
-	// NOTE: below code is commented out because it is no longer needed to find the parent before fixing a violation,
-	// but it is possible that we may want to do something with that idea in the future.
-
 	// if the violation of monotoncity was a oldVector that was expanded, find the parent and rectify it.
 	// then, rectify the children
-	/*else if (vector_class != hanselChainSet[i][j]._class && hanselChainSet[i][j].expanded_by)
+	else if (vector_class != hanselChainSet[i][j]._class && hanselChainSet[i][j].expanded_by)
 	{
 		if (c)
 		{
@@ -695,136 +591,56 @@ void checkViolationOfMonotonicityMethod(int i, int j)
 				}
 			}
 
-			std::cout << "Does the user want to preserve monotonicity? Enter (1/0): " << std::flush;
-			std::cin >> c;
-
-			if (c)
-			{
-				fixViolationOfMonotonicityClass(parent->number.first - 1, parent->number.second - 1, vector_class, true);
-			}
-			else
-			{
-				fixViolationOfMonotonicityClass(parent->number.first - 1, parent->number.second - 1, vector_class, false);
-			}
-		}
-	}*/
-}
-
-
-void monotonicityReaffirmation(int i, int a, int j, int vector_class)
-{
-	std::cout << "Monotonicity reaffirmation process:\n"
-		<< "What is the class of the vector : (" << hanselChainSet[i][a].dataPoint << ") ? Enter (1/0) : " << std::flush;
-	int c;
-	std::cin >> c;
-	std::cin.clear();
-	std::cin.ignore(1000, '\n');
-
-	if (c != vector_class)
-	{
-		std::cout << "The vector (" << hanselChainSet[i][a].dataPoint << ") is adjacent to the vector which was specified to have an f-change,\nbut the class"
-			<< " is different, causing a violation. Since monotonicity was not preserved,\nwould the user like to add a new attribute to fix the monotonicity (1),"
-			<< " or would the user prefer to use a non-monotonic function (0)? Enter (1/0): " << std::flush;
-		std::cin >> c;
-		std::cin.clear();
-		std::cin.ignore(1000, '\n');
-
-		if (c)
-		{
-			std::cout << "\nWhen adding a new attribute to fix the monotonicity, we assume that the current vector's class "
-				<< "will the opposite of what it was originally given so that it matches with its parent vector." << std::endl;
-			addNewAttributesFor.push_back(i);
-			addNewAttributesFor.push_back(a);
-			addNewAttributesFor.push_back(vector_class);
-		}
-		// non-monotonic function
-		else
-		{
-			nonMonotonicVectors.push_back(&hanselChainSet[i][j]);
+			fixViolationOfMonotonicityClass(parent->number.first - 1, parent->number.second - 1, vector_class); 
 		}
 	}
 }
 
 
-void fixViolationOfMonotonicityClass(int i, int j, int vector_class, bool preserve)
+void fixViolationOfMonotonicityClass(int i, int j, int vector_class)
 {
 	hanselChainSet[i][j]._class = vector_class; // reassign class here 
 	hanselChainSet[i][j].fixed = true;
 
-	// if vector class is true
 	if (vector_class)
 	{
 		hanselChainSet[i][j].expanded_one.clear();
 
-		// monotonicitiy preservation
-		if (preserve)
+		for (auto vector : hanselChainSet[i][j].expandable_one)
 		{
-			for (auto vector : hanselChainSet[i][j].expandable_one)
+			if (!vector->fixed && vector->_class != hanselChainSet[i][j]._class)
 			{
-				if (!vector->fixed && vector->_class != hanselChainSet[i][j]._class)
-				{
-					vector->expanded_by = &hanselChainSet[i][j];
-					hanselChainSet[i][j].expanded_one.push_back(vector);
-					fixViolationOfMonotonicityClass(vector->number.first - 1, vector->number.second - 1, vector_class, true);
-				}
-			}
-		}
-		// monotonicity reaffirmation
-		else
-		{
-			// need to delete any "expandeds" of other vectors that possibly expanded this one
-			// add here
-
-			if (hanselChainSet[i].size() > j + 1)
-			{
-				monotonicityReaffirmation(i, j + 1, j, vector_class);
+				vector->expanded_by = &hanselChainSet[i][j];
+				hanselChainSet[i][j].expanded_one.push_back(vector);
+				fixViolationOfMonotonicityClass(vector->number.first - 1, vector->number.second - 1, vector_class);
 			}
 		}
 
 		// need to re-ask questions about any vectors which were expanded previously (not monotonically related anymore)
-		// in this case, since the class went from 0 to 1, were re-ask those vectors which were expanded to a class of 0
+		// in this these, since the class went from 0 to 1, were re-ask those vectors which were expanded to a class of 0
 		for (auto vector : hanselChainSet[i][j].expanded_zero)
 		{
-			if (!vector->fixed)
-			{
-				vector_class = askingOfQuestion(vector->number.first - 1, vector->number.second - 1);
+			vector_class = askingOfQuestion(vector->number.first - 1, vector->number.second - 1);
 
-				if (vector_class != vector->_class)
-				{
-					fixExpansions(vector_class, vector->number.first - 1, vector->number.second - 1);
-				}
+			if (vector_class != vector->_class)
+			{
+				fixExpansions(vector_class, vector->number.first - 1, vector->number.second - 1);
 			}
 		}
 
 		hanselChainSet[i][j].expanded_zero.clear();
 	}
-	// vector class is false
 	else
 	{
 		hanselChainSet[i][j].expanded_zero.clear();
 
-		// monotonicity preservation
-		if (preserve)
+		for (auto vector : hanselChainSet[i][j].expandable_zero)
 		{
-			for (auto vector : hanselChainSet[i][j].expandable_zero)
+			if (!vector->fixed && vector->_class != hanselChainSet[i][j]._class)
 			{
-				if (!vector->fixed && vector->_class != hanselChainSet[i][j]._class)
-				{
-					vector->expanded_by = &hanselChainSet[i][j];
-					hanselChainSet[i][j].expanded_zero.push_back(vector);
-					fixViolationOfMonotonicityClass(vector->number.first - 1, vector->number.second - 1, vector_class, true);
-				}
-			}
-		}
-		// monotonicitiy reaffirmation
-		else
-		{
-			// need to delete any "expandeds" of other vectors that possibly expanded this one
-			// add here
-
-			if (j > 0)
-			{
-				monotonicityReaffirmation(i, j - 1, j, vector_class);
+				vector->expanded_by = &hanselChainSet[i][j];
+				hanselChainSet[i][j].expanded_zero.push_back(vector);
+				fixViolationOfMonotonicityClass(vector->number.first - 1, vector->number.second - 1, vector_class);
 			}
 		}
 
@@ -832,14 +648,11 @@ void fixViolationOfMonotonicityClass(int i, int j, int vector_class, bool preser
 		// in this these, since the class went from 1 to 0, were re-ask those vectors which were expanded to a class of 1
 		for (auto vector : hanselChainSet[i][j].expanded_one)
 		{
-			if (!vector->fixed)
-			{
-				vector_class = askingOfQuestion(vector->number.first - 1, vector->number.second - 1);
+			vector_class = askingOfQuestion(vector->number.first - 1, vector->number.second - 1);
 
-				if (vector_class != vector->_class)
-				{
-					fixExpansions(vector_class, vector->number.first - 1, vector->number.second - 1);
-				}
+			if (vector_class != vector->_class)
+			{
+				fixExpansions(vector_class, vector->number.first - 1, vector->number.second - 1);
 			}
 		}
 
@@ -1015,28 +828,6 @@ void applyBoolFuncToRealData(std::vector<std::vector<int>> boolFunc, std::vector
 				if (boolFunc[i][j] && !datapoint[j])
 				{
 					clauses[i] = false;
-					break;
-				}
-			}
-
-			// even if datapoint succeeded in being true, we need to check if it is a nonmonotonic exception 
-			if (clauses[i] && (int)boolFunc[i].size() > dimension)
-			{
-				bool isException = true; // this variable needs to be true if there is a nonmonotonic exception
-
-				for (int j = dimension; j < (int)boolFunc[i].size(); j++)
-				{
-					if (boolFunc[i][j] != datapoint[j])
-					{
-						isException = false; // flipped to false if at any point the exception does not match the current datapoint, meaning there is no exception
-						break;
-					}
-				}
-
-				// if the datapoint is a nonmonotonic exception, then the datapoint is false whereas it would have been true otherwise
-				if (isException) 
-				{
-					clauses[i] = false;
 				}
 			}
 		}
@@ -1084,50 +875,37 @@ void applyBoolFuncToRealData(std::vector<std::vector<int>> boolFunc, std::vector
 
 void changeAttributesOfRealData(std::vector<std::vector<int>> dataset)
 {
-	// ask user which attribute to change, or if just the class can be changed
+	// ask user which attribute to swap
 	auto askAttributeToChange = [](std::vector<int>& datapoint)
 	{
+		std::cout << "Which attribute needs to be changed to fix the violation of monotonicity in this vector: "
+			<< datapoint << "? (Enter an index location): " << std::flush;
 		int c;
-		std::cout << "The real datapoint (" << datapoint << ") has a value which does not match the value of the expert datapoint.\n"
-			<< "Do we want to change the real datapoint? Enter (1/0): " << std::flush;
 		std::cin >> c;
 
-		if (c)
+		try
 		{
-			std::cout << "\nDo we want to change the class of the real datapoint to match the expert datapoint (1),"
-				<< " or do we want to change an attribute of the real datapoint (0)? Enter (1/0): " << std::flush;
-			std::cin >> c;
-
-			if (c)
+			if (datapoint[c])
 			{
-				return; 
+				datapoint[c] = 0;
 			}
 			else
 			{
-				std::cout << "\nWhich attribute needs to be changed in this datapoint to match the expert data: "
-					<< datapoint << "? (Enter a valid index location, or anything else to stop): " << std::flush;
-				std::cin >> c;
-
-				try
-				{
-					if (datapoint[c])
-					{
-						datapoint[c] = 0;
-					}
-					else
-					{
-						datapoint[c] = 1;
-					}
-				}
-				catch (std::exception e)
-				{
-					std::cerr << "Improper index location: " << e.what() << std::flush;
-				}
+				datapoint[c] = 1;
 			}
+		}
+		catch (std::exception e)
+		{
+			std::cerr << "Improper index location: " << e.what() << std::flush;
 		}
 	};
 
-	// change real data attributes or class
+	// change real data attributes
+	//		search through possible expansions 
+	//			(expert 1, real 0 means seach for 0 expansions)
+	//			(expert 0, real 1, means search for 1 expansions)
+	//		if there is only one vector with the desired class in those expansions, then that vector is the new vector
+	//		otherwise, ask user which vector is the correct one out of the desired classes (which attribute needs changing)
 	for (int i = 0; i < (int)hanselChainSet.size(); i++)
 	{
 		for (int j = 0; j < hanselChainSet[i].size(); j++)
@@ -1135,14 +913,63 @@ void changeAttributesOfRealData(std::vector<std::vector<int>> dataset)
 			for (auto& datapoint : dataset)
 			{
 				auto temp = datapoint;
-				int _class = datapoint.back();
 				temp.pop_back(); // pop off class for comparison
 
-				if (hanselChainSet[i][j].dataPoint == temp && hanselChainSet[i][j]._class != _class)
+				if (hanselChainSet[i][j].dataPoint == temp)
 				{
-					// ask user which attribute to swap
-					askAttributeToChange(datapoint);
-					datapoint[datapoint.size() - 1] = hanselChainSet[i][j]._class; // should be equal to dimension, but just in case
+					if (hanselChainSet[i][j]._class)
+					{
+						int count = 0;
+						dvector swap;
+
+						for (auto vector : hanselChainSet[i][j].expandable_one)
+						{
+							if (vector->_class)
+							{
+								count++;
+								swap = *vector;
+							}
+						}
+
+						if (count == 1)
+						{
+							datapoint = swap.dataPoint;
+							datapoint.push_back(swap._class);
+						}
+						else
+						{
+							// ask user which attribute to swap
+							askAttributeToChange(datapoint);
+						}
+					}
+					else
+					{
+						if (!hanselChainSet[i][j]._class)
+						{
+							int count = 0;
+							dvector swap;
+
+							for (auto vector : hanselChainSet[i][j].expandable_zero)
+							{
+								if (vector->_class)
+								{
+									count++;
+									swap = *vector;
+								}
+							}
+
+							if (count == 1)
+							{
+								datapoint = swap.dataPoint;
+								datapoint.push_back(swap._class);
+							}
+							else
+							{
+								// ask user which attribute to swap
+								askAttributeToChange(datapoint);
+							}
+						}
+					}
 				}
 			}
 		}
@@ -1780,6 +1607,7 @@ std::pair<std::vector<std::vector<int>>, std::vector<std::vector<int>>> restoreF
 	// restore monotone Boolean function
 	// iterate over every hansel chain, and check each chain for its "lower one" vector, if it has one
 	std::vector<std::vector<int>> boolFunc;
+	const auto nonSimplifiedBoolFunc = boolFunc;
 
 	for (int i = 0; i < (int)hanselChainSet.size(); i++)
 	{
@@ -1815,20 +1643,6 @@ std::pair<std::vector<std::vector<int>>, std::vector<std::vector<int>>> restoreF
 					}
 				}
 
-				// need to check if the latest clause has a non-monotonic vector
-				// if yes, then add that vector to the end of the clause
-				for (int k = 0; k < (int)nonMonotonicVectors.size(); k++)
-				{
-					auto vector = nonMonotonicVectors[k];
-
-					if (i == vector->number.first - 1) // i is the index location of current hansel chain...
-					{
-						boolFunc[boolFunc.size() - 1].insert(boolFunc[boolFunc.size() - 1].end(), vector->dataPoint.begin(), vector->dataPoint.end());
-						nonMonotonicVectors.erase(nonMonotonicVectors.begin() + k);
-						k--;
-					}
-				}
-
 				break;
 			}
 		}
@@ -1838,8 +1652,6 @@ std::pair<std::vector<std::vector<int>>, std::vector<std::vector<int>>> restoreF
 			break;
 		}
 	}
-
-	const auto nonSimplifiedBoolFunc = boolFunc;
 
 	// simplify monotone Boolean function
 	// check if the absolute value of two difference clauses Hamming norms are equal to the difference of the vectors
@@ -1857,10 +1669,7 @@ std::pair<std::vector<std::vector<int>>, std::vector<std::vector<int>>> restoreF
 
 			for (int k = 0; k < dimension; k++)
 			{
-				if (boolFunc[i][k] != boolFunc[j][k])
-				{
-					difference++;
-				}
+				if (boolFunc[i][k] != boolFunc[j][k]) difference++;
 
 				left_hamming_norm += boolFunc[i][k];
 				right_hamming_norm += boolFunc[j][k];
@@ -1891,134 +1700,6 @@ std::pair<std::vector<std::vector<int>>, std::vector<std::vector<int>>> restoreF
 	}
 
 	return std::make_pair(boolFunc, nonSimplifiedBoolFunc);
-
-
-	// cant figure out what is wrong with the below code... keeps simplifying down to x4x5 for some reason
-
-	/*
-	// restore monotone Boolean function
-	// iterate over every hansel chain, and check each chain for its "lower one" vector, if it has one
-	std::vector<std::vector<int>> boolFunc;
-	const auto nonSimplifiedBoolFunc = boolFunc;
-
-	for (int i = 0; i < (int)hanselChainSet.size(); i++)
-	{
-		bool all_zero = true;
-		int j;
-
-		for (j = 0; j < (int)hanselChainSet[i].size(); j++)
-		{
-			// first vector of class 1 is "lower one" vector
-			if (hanselChainSet[i][j]._class)
-			{
-				bool first = false;
-
-				// for every element 1 in the "lower" one vector, 
-				// that element is in an "AND" clause in the monotone boolean funciton
-				for (int k = 0; k < dimension; k++)
-				{
-					if (hanselChainSet[i][j].dataPoint[k] == 1)
-					{
-						all_zero = false;
-
-						if (!first)
-						{
-							std::vector<int> temp(dimension);
-							temp[k] = 1;
-							boolFunc.push_back(temp);
-							first = true;
-						}
-						else
-						{
-							boolFunc[boolFunc.size() - 1][k] = 1;
-						}
-					}
-				}
-
-				// need to check if the latest clause has a non-monotonic vector
-				// if yes, then add that vector to the end of the clause
-				/*for (int k = 0; k < (int)nonMonotonicVectors.size(); k++)
-				{
-					auto vector = nonMonotonicVectors[k];
-
-					if (i == vector->number.first) // i is the index location of current hansel chain...
-					{
-						boolFunc[boolFunc.size() - 1].insert(boolFunc[boolFunc.size() - 1].end(), vector->dataPoint.begin(), vector->dataPoint.end());
-					}
-
-					nonMonotonicVectors.erase(nonMonotonicVectors.begin() + k);
-					k--;
-				}*/
-	/*
-				break;
-			}
-		}
-
-		if (all_zero && hanselChainSet[i][--j]._class)
-		{
-			break;
-		}
-	}
-
-	// simplify monotone Boolean function
-	// check if the absolute value of two difference clauses Hamming norms are equal to the difference of the vectors
-	// difference, as in, how many attributes differ from each other
-	// then, determine which statement is minimal (less attributes)
-	for (int i = 0; i < (int)boolFunc.size() - 1; i++)
-	{
-		// if boolFunc size is greater than the given dimension, it accounts for a nonmonotonic vector, so it cannot be reduced
-		/*if (boolFunc[i].size() > dimension)
-		{
-			continue;
-		}*/
-	/*
-		bool decrement_i = false;
-
-		for (int j = i + 1; j < (int)boolFunc.size(); j++)
-		{
-			// if boolFunc size is greater than the given dimension, it accounts for a nonmonotonic vector, so it cannot be reduced
-			/*if (boolFunc[j].size() > dimension)
-			{
-				break;
-			}*/
-	/*
-			int difference = 0;
-			int left_hamming_norm = 0;
-			int right_hamming_norm = 0;
-
-			for (int k = 0; k < dimension; k++)
-			{
-				if (boolFunc[i][k] != boolFunc[j][k]) difference++;
-
-				left_hamming_norm += boolFunc[i][k];
-				right_hamming_norm += boolFunc[j][k];
-			}
-
-			if (abs(left_hamming_norm - right_hamming_norm))
-			{
-				if (left_hamming_norm < right_hamming_norm)
-				{
-					boolFunc.erase(boolFunc.begin() + j);
-					j--;
-				}
-				else if (left_hamming_norm > right_hamming_norm)
-				{
-					boolFunc.erase(boolFunc.begin() + i);
-					//i--; used to be like this, but this doesn't work if i == 0 
-					// this doesnt work and in some cases
-					//j--;
-					decrement_i = true;
-				}
-			}
-		}
-
-		if (decrement_i)
-		{
-			i--;
-		}
-	}
-
-	return std::make_pair(boolFunc, nonSimplifiedBoolFunc);*/
 }
 
 
@@ -2030,45 +1711,17 @@ std::pair<std::string, std::string> functionToString(std::pair<std::vector<std::
 	// convert Boolean function to string
 	std::string boolFuncStrNonSimplified = "";
 
-	// convert not clause to string
-	auto checkNotClause = [&boolFunc](std::string& temp, int& i)
-	{
-		if (boolFunc[i].size() > dimension)
-		{
-			temp += " & !";
-
-			for (int j = dimension; j < boolFunc[i].size(); j++)
-			{
-				if (boolFunc[i][j])
-				{
-					temp += "x" + std::to_string(j + 1 - dimension);
-				}
-			}
-		}
-	};
-
 	for (int i = 0; i < (int)boolFunc.size(); i++)
 	{
 		std::string temp = "";
 
 		for (int j = 0; j < dimension; j++)
 		{
-			if (boolFunc[i][j])
-			{
-				temp += "x" + std::to_string(j + 1);
-			}
+			if (boolFunc[i][j]) temp += "x" + std::to_string(j + 1);
 		}
 
-		checkNotClause(temp, i);
-
-		if (!temp.empty() && i > 0)
-		{
-			boolFuncStrNonSimplified += " v " + temp;
-		}
-		else if (!temp.empty())
-		{
-			boolFuncStrNonSimplified += temp;
-		}
+		if (!temp.empty() && i > 0) boolFuncStrNonSimplified += " v " + temp;
+		else if (!temp.empty()) boolFuncStrNonSimplified += temp;
 	}
 
 	// simplified
@@ -2083,13 +1736,8 @@ std::pair<std::string, std::string> functionToString(std::pair<std::vector<std::
 
 		for (int j = 0; j < dimension; j++)
 		{
-			if (boolFunc[i][j])
-			{
-				temp += "x" + std::to_string(j + 1);
-			}
+			if (boolFunc[i][j]) temp += "x" + std::to_string(j + 1);
 		}
-
-		checkNotClause(temp, i);
 
 		if (!temp.empty() && i > 0)
 		{
@@ -2216,14 +1864,7 @@ void printTable(std::fstream& results, std::string boolFuncStrSimplified, std::s
 
 			if (include_violation)
 			{
-				if (hanselChainSet[i][j].fixed)
-				{
-					results << "1,";
-				}
-				else
-				{
-					results << ",";
-				}
+				results << hanselChainSet[i][j].fixed << ",";
 			}
 
 			if (hanselChainSet[i][j].expanded_by)
