@@ -48,8 +48,8 @@ struct dvector
 	/// @brief one-to-one expansions that are impossible because the given class was not one
 	std::vector<dvector*> unexpandable_one;
 
-	/// @brief true if the vector was "fixed" as a result of a violation of monotonicity
-	bool fixed = false;
+	/// @brief true if the vector was "fixed" as a result of a violation of monotonicity, or simply an f-change
+	bool f_change = false;
 
 	/// @brief true if the monotonicity of this vector is doubtful
 	//bool monotonicityDoubt = false;
