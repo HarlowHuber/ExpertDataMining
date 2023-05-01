@@ -48,8 +48,8 @@ struct dvector
 	/// @brief one-to-one expansions that are impossible because the given class was not one
 	std::vector<dvector*> unexpandable_one;
 
-	/// @brief true if the vector was "fixed" as a result of a violation of monotonicity
-	bool fixed = false;
+	/// @brief true if the vector was "fixed" as a result of a violation of monotonicity, or simply an f-change
+	bool f_change = false;
 
 	/// @brief true if the monotonicity of this vector is doubtful
 	//bool monotonicityDoubt = false;
@@ -146,6 +146,11 @@ std::vector<std::string> attributes;
 std::vector<int> addNewAttributesFor;
 
 
+/// @brief a list of vectors where each vector cannot be represented by the monotone Boolean Function, so if there is a lower one in the chain that it belongs to, 
+/// they will be represented by a "NOT" clause
+std::vector<dvector*> nonMonotonicVectors;
+
+
 /// @brief generates a Hansel Chain from a given dimension and number
 /// @param num 
 /// @param vector_dimension 
@@ -235,13 +240,20 @@ void numberAssignment();
 void violationOfMonotonicity();
 
 
+/// @brief monotonicity reaffirmation: described in detail in README
+/// @param i the hansel chain
+/// @param a the adjacent vector
+/// @param j the source of the f-change or potential violation
+void monotonicityReaffirmation(int i, int a, int j, int vector_class);
+
+
 /// @brief determine what method to use to fix violations of monotonicity
 void checkViolationOfMonotonicityMethod(int i, int j);
 
 
 /// @brief fix violation of monotonicity by changing the class
 /// @param root is true if the vector in question was asked. False if it was expanded.
-void fixViolationOfMonotonicityClass(int i, int j, int vector_class);
+void fixViolationOfMonotonicityClass(int i, int j, int vector_class, bool preserve);
 
 
 /// @brief add a new attribute to the dataset to fix violation of monotonicity
