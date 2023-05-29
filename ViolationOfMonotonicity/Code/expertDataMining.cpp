@@ -435,9 +435,9 @@ std::vector<std::string> parse_input(char delimiter, std::string temp)
 }
 
 
-void violationOfMonotonicity()
+void f_change_check()
 {
-	std::cout << "\n\nChecking for violations of monotonicity:\n" << std::endl;
+	std::cout << "\n\nChecking for f-changes:\n" << std::endl;
 
 	const char separator = ' ';
 	const int width = 15;
@@ -460,7 +460,7 @@ void violationOfMonotonicity()
 	}
 
 	std::string temp;
-	std::cout << "Please enter the number of any vectors which are a violation of monotonicity in a comma-separalited list (e.g. 1.1, 3.2, ..., 7.4): " << std::flush;
+	std::cout << "Please enter the number of any vectors which need any changes in a comma-separalited list (e.g. 1.1, 3.2, ..., 7.4): " << std::flush;
 
 	try
 	{
@@ -470,7 +470,7 @@ void violationOfMonotonicity()
 	}
 	catch (std::exception e)
 	{
-		std::cerr << "Violation of monotonicity user input fail. " << e.what() << std::flush;
+		std::cerr << "f-change user input fail. " << e.what() << std::flush;
 
 		return;
 	}
@@ -741,6 +741,7 @@ void monotonicityReaffirmation(int i, int a, int j, int vector_class)
 		else
 		{
 			nonMonotonicVectors.push_back(&hanselChainSet[i][j]);
+			non_monotone = true;
 		}
 	}
 }
@@ -1652,8 +1653,8 @@ int init()
 	std::cout << "\n0 - Shortest Hansel Chain First";
 	std::cout << "\n1 - Longest Hansel Chain First";
 	std::cout << "\n2 - Manual Hansel Chain Order";
-	std::cout << "\n3 - Default Order";
-	std::cout << "\n4 - Any Vector Order";
+	std::cout << "\n3 - Default Hansel Chain Algorithm Order";
+	//std::cout << "\n4 - Any Vector Order"; // NOTE: not implemented and likely won't be, but leave it here anyway
 	std::cout << "\nEnter: " << std::flush;
 	std::cin >> option;
 
@@ -2019,7 +2020,7 @@ std::pair<std::string, std::string> functionToString(std::pair<std::vector<std::
 }
 
 
-void printTable(std::fstream& results, std::string boolFuncStrSimplified, std::string boolFuncStrNonSimplified, bool include_violation)
+void printTable(std::fstream& results, std::string boolFuncStrSimplified, std::string boolFuncStrNonSimplified, bool include_f_change)
 {
 	std::string askStr = "";
 	std::string answerStr = "";
@@ -2030,15 +2031,23 @@ void printTable(std::fstream& results, std::string boolFuncStrSimplified, std::s
 		askStr += std::to_string(orderOfAskingSummary[i] + 1) + "." + std::to_string(orderOfAskingSummary[i + 1] + 1) + ",";
 	}
 
-	results << "Monotone Boolean Function Simplified: " + boolFuncStrSimplified + "\n";
-	results << "Monotone Boolean Function Non-simplified:" + boolFuncStrNonSimplified + "\n";
+	if (non_monotone)
+	{
+		results << "Non-monotone Boolean Function Simplified: " + boolFuncStrSimplified + "\n";
+		results << "Non-monotone Boolean Function Non-simplified:" + boolFuncStrNonSimplified + "\n";
+	}
+	else
+	{
+		results << "Monotone Boolean Function Simplified: " + boolFuncStrSimplified + "\n";
+		results << "Monotone Boolean Function Non-simplified:" + boolFuncStrNonSimplified + "\n";
+	}
 	results << "Order of Questions:," + askStr + "\n";
 	results << "Answers:," + answerStr + "\n";
 	results << "Total Questions: " + std::to_string(questionsAsked) + "\n\n";
 	results << "Reference Number,Vector,";
 
 	// these orders are irrelevent for violation of monotonicity
-	if (!include_violation)
+	if (!include_f_change)
 	{
 		results << "Planned Query Order,"
 			<< "Updated Query Order,"
@@ -2048,7 +2057,7 @@ void printTable(std::fstream& results, std::string boolFuncStrSimplified, std::s
 
 	results << "Class,";
 
-	if (include_violation)
+	if (include_f_change)
 	{
 		results << "f-Change,";
 	}
@@ -2118,7 +2127,7 @@ void printTable(std::fstream& results, std::string boolFuncStrSimplified, std::s
 			results << std::to_string(i + 1) + "." + std::to_string(j + 1) + ",";
 			results << std::setfill('0') << std::setw(dimension) << vecStr << ",";
 			
-			if (!include_violation)
+			if (!include_f_change)
 			{
 				results << plannedQueryOrder << ",";
 				results << updatedQueryOrder << ",";
@@ -2128,7 +2137,7 @@ void printTable(std::fstream& results, std::string boolFuncStrSimplified, std::s
 
 			results << hanselChainSet[i][j]._class << ",";
 
-			if (include_violation)
+			if (include_f_change)
 			{
 				if (hanselChainSet[i][j].f_change)
 				{
@@ -2267,8 +2276,8 @@ int main()
 	orderOfAskingSummary.clear();
 
 	// print rectified results
-	results << "\nResults After Resolving Any Violations of Monotonicity\n";
-	violationOfMonotonicity();
+	results << "\nResults After Applying Any f-Changes\n";
+	f_change_check();
 	boolFunc = restoreFunction();
 
 	if (realData)

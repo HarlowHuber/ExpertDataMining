@@ -150,6 +150,9 @@ std::vector<int> addNewAttributesFor;
 /// they will be represented by a "NOT" clause
 std::vector<dvector*> nonMonotonicVectors;
 
+/// @brief truye if nonMonotonicVectors is used
+bool non_monotone = false;
+
 
 /// @brief generates a Hansel Chain from a given dimension and number
 /// @param num 
@@ -237,7 +240,7 @@ void numberAssignment();
 
 
 /// @brief call checkViolationOfMonotonicity ofor vectors whichc have violations of monotonicity
-void violationOfMonotonicity();
+void f_change_check();
 
 
 /// @brief monotonicity reaffirmation: described in detail in README
@@ -299,7 +302,7 @@ std::pair<std::string, std::string> functionToString();
 /// @param boolFuncStrSimplified 
 /// @param boolFuncStrNonSimplified 
 /// @param include_violation variable which speciied whether or not to include the "fixed" field of the dvector struct
-void printTable(std::fstream& results, std::string boolFuncStrSimplified, std::string boolFuncStrNonSimplified, bool include_violation);
+void printTable(std::fstream& results, std::string boolFuncStrSimplified, std::string boolFuncStrNonSimplified, bool include_f_change);
 
 
 /// @brief generic printing function

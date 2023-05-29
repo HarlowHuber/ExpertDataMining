@@ -1,7 +1,7 @@
 #include "expertDataMining.h"
 
 
-std::vector<std::vector<dvector>> genChains(int num, int vector_dimension, std::unordered_map<int, std::vector<std::vector<dvector>>> chain)
+std::vector<std::vector<expertDataMining::dvector>> expertDataMining::genChains(int num, int vector_dimension, std::unordered_map<int, std::vector<std::vector<dvector>>> chain)
 {
 	std::unordered_map<int, std::vector<std::vector<dvector>>> chains = chain;
 
@@ -35,7 +35,6 @@ std::vector<std::vector<dvector>> genChains(int num, int vector_dimension, std::
 	// emptV = number of empty std::vectors
 	for (int j = 0; j < chains.size() - 1; j++)
 	{
-		// count is to keep up with the elemental std::oldVector having elements removed/moved from
 		for (int k = 0; k < chains.at(j).size(); k++)
 		{
 			// I think I need to make the code below recursive
@@ -93,7 +92,7 @@ std::vector<std::vector<dvector>> genChains(int num, int vector_dimension, std::
 }
 
  
-void calculateHanselChains(int vector_dimension)
+void expertDataMining::calculateHanselChains(int vector_dimension)
 {
 	// For n dimensions, iterate through to generate chains and
 	for (int dim_num = 0; dim_num < vector_dimension; dim_num++)
@@ -143,7 +142,7 @@ void calculateHanselChains(int vector_dimension)
 }
 
 
-void askMajorityFlag()
+void expertDataMining::askMajorityFlag()
 {
 	// determine whether to do majority vectors first
 	std::cout << "\nUse majority flag(1/0)?\n";
@@ -327,7 +326,7 @@ void askMajorityFlag()
 }
 
 
-void findMajorityVectors()
+void expertDataMining::findMajorityVectors()
 {
 	// find the "majority vectors"
 	for (int i = 0; i < numChains; i++)
@@ -356,7 +355,7 @@ void findMajorityVectors()
 }
 
 
-bool questionFunc(int i, int j, int& vector_class)
+bool expertDataMining::questionFunc(int i, int j, int& vector_class)
 {
 	// updated order must go before actual question because its tracking the intention of the question, not whether it was asked.
 	if (!hanselChainSet[i][j].majorityFlag || !usedMajorityFlag || !hanselChainSet[i][j].visited || !hanselChainSet[i][j].updatedQueryOrder) // used, not useMajority flag because otherwise may expand twice.
@@ -415,7 +414,7 @@ std::ostream& operator<<(std::ostream& out, const std::pair<int, int>& p)
 }
 
 
-std::vector<std::string> parse_input(char delimiter, std::string temp)
+std::vector<std::string>expertDataMining::parse_input(char delimiter, std::string temp)
 {
 	// parse a string by a delimiter
 	std::vector<std::string> tokens;
@@ -435,9 +434,9 @@ std::vector<std::string> parse_input(char delimiter, std::string temp)
 }
 
 
-void violationOfMonotonicity()
+void expertDataMining::f_change_check()
 {
-	std::cout << "\n\nChecking for violations of monotonicity:\n" << std::endl;
+	std::cout << "\n\nChecking for f-changes:\n" << std::endl;
 
 	const char separator = ' ';
 	const int width = 15;
@@ -460,7 +459,7 @@ void violationOfMonotonicity()
 	}
 
 	std::string temp;
-	std::cout << "Please enter the number of any vectors which are a violation of monotonicity in a comma-separalited list (e.g. 1.1, 3.2, ..., 7.4): " << std::flush;
+	std::cout << "Please enter the number of any vectors which need any changes in a comma-separalited list (e.g. 1.1, 3.2, ..., 7.4): " << std::flush;
 
 	try
 	{
@@ -470,7 +469,7 @@ void violationOfMonotonicity()
 	}
 	catch (std::exception e)
 	{
-		std::cerr << "Violation of monotonicity user input fail. " << e.what() << std::flush;
+		std::cerr << "f-change user input fail. " << e.what() << std::flush;
 
 		return;
 	}
@@ -513,7 +512,7 @@ void violationOfMonotonicity()
 }
 
 
-void checkViolationOfMonotonicityMethod(int i, int j)
+void expertDataMining::checkViolationOfMonotonicityMethod(int i, int j)
 {
 	int vector_class = hanselChainSet[i][j]._class;
 	hanselChainSet[i][j].expanded_by = nullptr;
@@ -532,7 +531,7 @@ void checkViolationOfMonotonicityMethod(int i, int j)
 	// however, we still need to check those other vectors that are not monotonically related to the changed vector
 	if (vector_class)
 	{
-		auto f1 = [&vector_class, &i, &j]()
+		auto f1 = [&vector_class, &i, &j, this]()
 		{
 			// need to re-ask questions about any vectors which were expanded previously (not monotonically related anymore)
 			// in this these, since the class went from 0 to 1, we re-ask those vectors which were expanded to a class of 0
@@ -575,7 +574,7 @@ void checkViolationOfMonotonicityMethod(int i, int j)
 	// however, we still need to check those other vectors that are not monotonically related to the changed vector
 	else
 	{
-		auto f2 = [&vector_class, &i, &j]()
+		auto f2 = [&vector_class, &i, &j, this]()
 		{
 			// need to re-ask questions about any vectors which were expanded previously (not monotonically related anymore)
 			// in this case, since the class went from 1 to 0, were re-ask those vectors which were expanded to a class of 1
@@ -711,7 +710,7 @@ void checkViolationOfMonotonicityMethod(int i, int j)
 }
 
 
-void monotonicityReaffirmation(int i, int a, int j, int vector_class)
+void expertDataMining::monotonicityReaffirmation(int i, int a, int j, int vector_class)
 {
 	std::cout << "Monotonicity reaffirmation process:\n"
 		<< "What is the class of the vector : (" << hanselChainSet[i][a].dataPoint << ") ? Enter (1/0) : " << std::flush;
@@ -741,12 +740,13 @@ void monotonicityReaffirmation(int i, int a, int j, int vector_class)
 		else
 		{
 			nonMonotonicVectors.push_back(&hanselChainSet[i][j]);
+			non_monotone = true;
 		}
 	}
 }
 
 
-void fixViolationOfMonotonicityClass(int i, int j, int vector_class, bool preserve)
+void expertDataMining::fixViolationOfMonotonicityClass(int i, int j, int vector_class, bool preserve)
 {
 	hanselChainSet[i][j]._class = vector_class; // reassign class here 
 	hanselChainSet[i][j].f_change = true;
@@ -892,7 +892,7 @@ void fixViolationOfMonotonicityClass(int i, int j, int vector_class, bool preser
 }
 
 
-void fixViolationOfMonotonicityAddAttr()
+void expertDataMining::fixViolationOfMonotonicityAddAttr()
 {
 	dimension++;
 	attributes.push_back("");
@@ -987,7 +987,7 @@ void fixViolationOfMonotonicityAddAttr()
 }
 
 
-std::vector<std::vector<int>> addNewAttributesToRealData()
+std::vector<std::vector<int>> expertDataMining::addNewAttributesToRealData()
 {
 	std::vector<std::vector<int>> dataset;
 	std::fstream file;
@@ -1044,7 +1044,7 @@ std::vector<std::vector<int>> addNewAttributesToRealData()
 }
 
 
-void applyBoolFuncToRealData(std::vector<std::vector<int>> boolFunc, std::vector<std::vector<int>> dataset)
+void expertDataMining::applyBoolFuncToRealData(std::vector<std::vector<int>> boolFunc, std::vector<std::vector<int>> dataset)
 {
 	for (auto& datapoint : dataset)
 	{
@@ -1126,7 +1126,7 @@ void applyBoolFuncToRealData(std::vector<std::vector<int>> boolFunc, std::vector
 }
 
 
-void changeAttributesOfRealData(std::vector<std::vector<int>> dataset)
+void expertDataMining::changeAttributesOfRealData(std::vector<std::vector<int>> dataset)
 {
 	// ask user which attribute to change, or if just the class can be changed
 	auto askAttributeToChange = [](std::vector<int>& datapoint)
@@ -1214,7 +1214,7 @@ void changeAttributesOfRealData(std::vector<std::vector<int>> dataset)
 }
 
 
-void staticOrderQuestionsFunc()
+void expertDataMining::staticOrderQuestionsFunc()
 {
 	for (int i = 0; i < numChains; i++)
 	{
@@ -1235,7 +1235,7 @@ void staticOrderQuestionsFunc()
 }
 
 
-bool chainJumpMajorityFlagHelper(int i)
+bool expertDataMining::chainJumpMajorityFlagHelper(int i)
 {
 	for (int t = 0; t < (int)trueVectorInd.size() - 1; t += 2)
 	{
@@ -1249,7 +1249,7 @@ bool chainJumpMajorityFlagHelper(int i)
 }
 
 
-void chainJumpOrderQuestionsFunc()
+void expertDataMining::chainJumpOrderQuestionsFunc()
 {
 	std::vector<int> skippedVectors;
 
@@ -1348,7 +1348,7 @@ void chainJumpOrderQuestionsFunc()
 }
 
 
-void manualHanselChainOrder()
+void expertDataMining::manualHanselChainOrder()
 {
 	std::cout << "\nThere are " << numChains << " Hansel Chains, labelled 1 through " << numChains << "." << std::endl;
 
@@ -1394,7 +1394,7 @@ void manualHanselChainOrder()
 }
 
 
-void anyVectorOrder()
+/*void expertDataMining::anyVectorOrder()
 {
 	std::fstream table;
 	table.open("table.csv", std::ios::out | std::ios::app);
@@ -1406,10 +1406,10 @@ void anyVectorOrder()
 	ShellExecute(NULL, L"open", str, NULL, NULL, SW_SHOWNORMAL);
 
 	// read vectors from file
-}
+}*/
 
 
-void calculateAllPossibleExpansions()
+void expertDataMining::calculateAllPossibleExpansions()
 {
 	for (int i = 0; i < (int)hanselChainSet.size(); i++)
 	{
@@ -1417,15 +1417,26 @@ void calculateAllPossibleExpansions()
 		{
 			for (int k = 0; k < dimension; k++)
 			{
+				// add k-value here
+				for (int d = 0; d < kv_attributes[k]; d++)
+				{
+					possibleExpansions(d, i, j, k, 0);
+				}
+
+				/*
+				* instead of the k-value loop above, this used to just be:
+				
 				possibleExpansions(1, i, j, k, 0);
 				possibleExpansions(0, i, j, k, 0);
+
+				*/
 			}
 		}
 	}
 }
 
 
-void possibleExpansions(int vector_class, int i, int j, int k, int startChain)
+void expertDataMining::possibleExpansions(int vector_class, int i, int j, int k, int startChain)
 {
 	// possible expansions from successive chains for a given class
 	if (vector_class != hanselChainSet[i][j].dataPoint[k])
@@ -1441,7 +1452,7 @@ void possibleExpansions(int vector_class, int i, int j, int k, int startChain)
 			{
 				// expand the oldVector and mark it as visited
 				// these are "used" expansions
-				if (expanded.dataPoint == hanselChainSet[hc][v].dataPoint && !hanselChainSet[hc][v].visited && &hanselChainSet[hc][v] != &hanselChainSet[i][j])
+				if (expanded.dataPoint == hanselChainSet[hc][v].dataPoint && !hanselChainSet[hc][v].visited && &hanselChainSet[hc][v] != &hanselChainSet[i][j]) // comparing memory locations in last clause
 				{
 					if (vector_class)
 					{
@@ -1474,7 +1485,7 @@ void possibleExpansions(int vector_class, int i, int j, int k, int startChain)
 }
 
 
-void checkExpansions(int vector_class, int i, int j)
+void expertDataMining::checkExpansions(int vector_class, int i, int j)
 {
 	if (vector_class)
 	{
@@ -1505,7 +1516,7 @@ void checkExpansions(int vector_class, int i, int j)
 }
 
 
-void fixExpansions(int vector_class, int i, int j)
+void expertDataMining::fixExpansions(int vector_class, int i, int j)
 {
 	if (vector_class)
 	{
@@ -1540,7 +1551,7 @@ void fixExpansions(int vector_class, int i, int j)
 }
 
 
-int askingOfQuestion(int i, int j)
+int expertDataMining::askingOfQuestion(int i, int j)
 {
 	int vector_class = -1;
 	bool ask = true;
@@ -1566,14 +1577,18 @@ int askingOfQuestion(int i, int j)
 
 		for (int k = 0; k < dimension; k++)
 		{
-			if (hanselChainSet[i][j].dataPoint[k])
+			/*if (hanselChainSet[i][j].dataPoint[k])
 			{
 				std::cout << attributes[k] + "\t\t\t= true (1)" << std::endl;
 			}
 			else
 			{
 				std::cout << attributes[k] + "\t\t\t= false (0)" << std::endl;
-			}
+			}*/
+
+			// k-value here
+
+			std::cout << attributes[k] + "\t\t\t= " << hanselChainSet[i][j].dataPoint[k] << std::endl;
 		}
 
 		std::cout << "Enter Class: " << std::flush;
@@ -1592,7 +1607,7 @@ int askingOfQuestion(int i, int j)
 }
 
 
-void numberAssignment()
+void expertDataMining::numberAssignment()
 {
 	for (int i = 0; i < (int)hanselChainSet.size(); i++)
 	{
@@ -1605,18 +1620,99 @@ void numberAssignment()
 }
 
 
-int init()
+int expertDataMining::init()
 {
 	std::cout << "Expert Data Mining with Hansel Chains.\n" << std::endl;
 
-	std::cout << "How many attributes are in this dataset (what is the dimension)?";
-	std::cout << "\nEnter: " << std::flush;
-	std::cin >> dimension;
-	std::cin.clear();
-	std::cin.ignore(1000, '\n');
+	if (dimension <= 0) // only executed when the constructor was not initialized with a child_attributes 
+	{
+		std::cout << "How many attributes are in this dataset (what is the dimension)?";
+		std::cout << "\nEnter: " << std::flush;
+		std::cin >> dimension;
+		std::cin.clear();
+		std::cin.ignore(1000, '\n');
 
-	attributes.resize(dimension);
-	kv_attributes.resize(dimension);
+		attributes.resize(dimension);
+		kv_attributes.resize(dimension);
+		children.resize(dimension);
+
+		// start sub-functions
+		std::cout << "Are there any nested attributes (sub-functions) for this dataset?"
+			<< "\nIf not, then enter -1. If yes, please enter a comma-delimited list of which attributes have nested attributes, where:" << std::endl;
+
+		for (int i = 1; i < dimension + 1; i++)
+		{
+			std::cout << i << " - x" << i << std::endl;
+		}
+
+		std::cout << "Please enter: " << std::flush;
+		std::string temp;
+		std::getline(std::cin, temp);
+		auto tokens = parse_input(',', temp);
+
+		if (!tokens.empty() && tokens[0] != "-1")
+		{
+
+			for (auto token : tokens)
+			{
+				try
+				{
+					int i = stoi(token);
+
+					if (i < dimension)
+					{
+						auto subFunction = expertDataMining(i + 1);
+						children[i] = subFunction;
+					}
+				}
+				catch (std::exception& e)
+				{
+					std::cerr << "User input fail. " << e.what() << std::endl;
+				}
+			}
+		}
+		// end sub-functions
+	}
+
+	// start parent functions (grouping of attributes)
+	if (dimension > 5)
+	{
+		std::cout << "Are there any groupings of attributes?"
+			<< "\nIf not, then enter -1. If yes, please enter how many groups there are (please keep this to 2-5 groups): " << std::endl;
+		int groups;
+		std::cin >> groups;
+		
+		if (groups > 0)
+		{
+			grouped_attributes.resize(groups);
+			std::vector<int> group_sizes(groups);
+			int grandchild_counter = 0;
+
+			for (int i = 0; i < groups; i++)
+			{
+				std::cout << "Please enter the number of attributes that are in group " << i + 1 << ": " << std::flush;
+
+				try
+				{
+					std::cin >> group_sizes[i];
+					grouped_attributes[i] = expertDataMining(i + 1, group_sizes[i]);
+
+					for (int j = 0; j < group_sizes[i] && grandchild_counter < (int)children.size(); j++, grandchild_counter++)
+					{
+						grouped_attributes[i].children[j] = children[grandchild_counter];
+					}
+				}
+				catch (std::exception& e)
+				{
+					std::cerr << "User input fail. " << e.what() << std::endl;
+				}
+			}
+
+			std::cout << "Since parent attributes have been specified (the groupings), the expert data mining process will start with those attributes first." << std::endl;
+
+			return -1;
+		}
+	}
 
 	// name every attribute to reduce confusion for user
 	for (int i = 0; i < dimension; i++)
@@ -1652,8 +1748,8 @@ int init()
 	std::cout << "\n0 - Shortest Hansel Chain First";
 	std::cout << "\n1 - Longest Hansel Chain First";
 	std::cout << "\n2 - Manual Hansel Chain Order";
-	std::cout << "\n3 - Default Order";
-	std::cout << "\n4 - Any Vector Order";
+	std::cout << "\n3 - Default Hansel Chain Algorithm Order";
+	//std::cout << "\n4 - Any Vector Order"; // NOTE: not implemented and likely won't be, but leave it here anyway
 	std::cout << "\nEnter: " << std::flush;
 	std::cin >> option;
 
@@ -1668,12 +1764,12 @@ int init()
 	}
 
 	std::cout << "Enter: " << std::flush;
-	std::string temp;
+	std::string temp = "";
 	std::cin >> temp;
 	size_t pos = 0;
 	std::string token;
 
-	auto f = [&temp, &pos](int i)
+	auto f = [&temp, &pos, this](int i)
 	{
 		if (-1 < i && i < dimension)
 		{
@@ -1703,8 +1799,65 @@ int init()
 }
 
 
-void expertDataMining(int option)
+expertDataMining::expertDataMining() {}
+
+
+expertDataMining::expertDataMining(int parent_attribute) // used when creating children
 {
+	this->parent_attribute = parent_attribute;
+}
+
+
+expertDataMining::expertDataMining(std::vector<expertDataMining> child_attributes) // used when creating parent
+{
+	dimension = (int)child_attributes.size();
+
+	attributes.resize(dimension);
+	kv_attributes.resize(dimension);
+	children.resize(dimension);
+	
+	for (int i = 0; i < dimension; i++)
+	{
+		children[i] = child_attributes[i];
+	}
+}
+
+
+expertDataMining::expertDataMining(int parent_attribute, int dimension) // used when creating parent, and then assigning children
+{
+	this->parent_attribute = parent_attribute;
+	this->dimension = dimension;
+
+	attributes.resize(dimension);
+	kv_attributes.resize(dimension);
+	children.resize(dimension);
+}
+
+
+void expertDataMining::start(int iteration)
+{
+	if (parent_attribute != -1)
+	{
+		std::cout << "This dataset represents the nested attributes for the attribute x" << parent_attribute << std::endl;
+	}
+
+	// find real data
+	if (parent_attribute != -1 && std::filesystem::exists(filename))
+	{
+		// FIX: dimension is already assigned if file is given
+		realData = true;
+	}
+
+	int option = init();
+
+	if (option == -1)
+	{
+		auto parent = expertDataMining(grouped_attributes);
+		parent.start(iteration - 1);
+
+		return;
+	}
+
 	// order vectors and ask questions
 	if (chainJump)
 	{
@@ -1743,12 +1896,12 @@ void expertDataMining(int option)
 			break;
 
 			// any oldVector order
-		case 4:
+		/*case 4:
 			anyVectorOrder();
 			numberAssignment();
 			askMajorityFlag();
 			chainJumpOrderQuestionsFunc();
-			break;
+			break;*/
 
 			// shortest chain first order
 		default:
@@ -1796,12 +1949,12 @@ void expertDataMining(int option)
 			break;
 
 			// any oldVector order
-		case 4:
+		/*case 4:
 			anyVectorOrder();
 			numberAssignment();
 			askMajorityFlag();
 			staticOrderQuestionsFunc();
-			break;
+			break;*/
 
 			// shortest chain first order
 		default:
@@ -1817,10 +1970,188 @@ void expertDataMining(int option)
 		}
 	}
 
+	printToFile(option, iteration);
+
+	startChildren(iteration + 1);
 }
 
 
-std::pair<std::vector<std::vector<int>>, std::vector<std::vector<int>>> restoreFunction()
+void expertDataMining::printToFile(int option, int iteration)
+{
+	// print vectors and monotone Boolean Function to a file
+	std::fstream results;
+	std::string name = "results_of_function_" + std::to_string(iteration) + ".csv";
+
+	results.open(name, std::ios::out | std::ios::app);
+	
+	if (iteration > 0)
+	{
+		results << "This results file represents the nested function that is associated with attribute x" << parent_attribute
+			<< " of the function that is one level higher.\n\n"
+			<< "x" << parent_attribute << "->,";
+
+		for (int i = 0; i < dimension; i++)
+		{
+			results << "x" << parent_attribute << "." << i + 1 << ",";
+		}
+
+			results << "\n\n";
+	}
+
+	results << "Attributes, k-value, sub-attributes\n";
+
+	for (int i = 0; i < dimension; i++)
+	{
+		if (iteration <= 0)
+		{
+			results << "x" << i + 1 << "," << kv_attributes[i];
+
+			if (children[i].parent_attribute != -1)
+			{
+				results << ",True (defined in file one level up).\n";
+			}
+			else
+			{
+				results << ",False;\n";
+			}
+		}
+		else
+		{
+			results << "x" << parent_attribute << "." << i + 1 << "," << kv_attributes[i];
+
+			if (children[i].parent_attribute != -1)
+			{
+				results << ",True (defined in file one level up).\n";
+			}
+			else
+			{
+				results << ",False\n";
+			}
+		}
+	}
+
+	// Pilot Questions:
+	results << "\nPilot Questions:\n";
+
+	// order
+	switch (option)
+	{
+	case 1:
+		results << "Longest Hansel Chain First\n";
+		break;
+
+	case 2:
+		results << "Manual Hansel Chain Order\n";
+		break;
+
+	case 3:
+		results << "Default Order\n";
+		break;
+
+	case 4:
+		results << "Any Vector Order\n";
+		break;
+
+	default:
+		results << "Shortest Hansel Chain First\n";
+		break;
+	}
+
+	// true attributes
+	if (trueAttributes.size() > 0)
+	{
+		results << "True Attributes:,";
+
+		for (int i = 0; i < (int)trueAttributes.size() - 1; i++)
+		{
+			results << "x" << trueAttributes[i] + 1 << ",";
+		}
+
+		results << "x" << trueAttributes[trueAttributes.size() - 1] + 1 << "\n";
+	}
+
+	// majority flag
+	if (usedMajorityFlag)
+	{
+		results << "Majority Flag used," << trueMajority << "\n";
+	}
+	else
+	{
+		results << "Majority Flag not used\n";
+	}
+
+	// chainJump
+	if (chainJump)
+	{
+		results << "Chain jump ";
+
+		if (top)
+		{
+			results << "top: start at the top and skip that chain if the oldVector class is 1 (revisit later)\n\n";
+		}
+		else
+		{
+			results << "bottom: start at the bottom and skip that chain if the oldVector class is 0 (revisit later)\n\n";
+		}
+	}
+	else
+	{
+		results << "Static\n\n";
+	}
+
+
+	// print original results
+	results << "Original Results\n";
+	auto boolFunc = restoreFunction();
+	auto str = functionToString(boolFunc);
+	std::string boolFuncStrSimplified = str.first;
+	std::string boolFuncStrNonSimplified = str.second;
+	printTable(results, boolFuncStrSimplified, boolFuncStrNonSimplified, false);
+
+	// reset variables
+	questionsAsked = 0;
+	orderOfAskingSummary.clear();
+
+	// print rectified results
+	results << "\nResults After Applying Any f-Changes\n";
+	f_change_check();
+	boolFunc = restoreFunction();
+
+	if (realData)
+	{
+		std::cout << "Does the user want to change the attributes of the real data or to apply the Boolean function to the real data? (1/0): " << std::flush;
+		int c;
+		std::cin >> c;
+		std::cin.clear();
+		std::cin.ignore(1000, '\n');
+
+		// if new attributes have been added, real data must be expanded
+		auto dataset = addNewAttributesToRealData();
+
+		if (c)
+		{
+			changeAttributesOfRealData(dataset);
+		}
+		// apply monotoone Boolean Function on real data
+		// use boolFunc.first for simplified function
+		else
+		{
+			applyBoolFuncToRealData(boolFunc.first, dataset);
+		}
+	}
+
+	str = functionToString(boolFunc);
+	boolFuncStrSimplified = str.first;
+	boolFuncStrNonSimplified = str.second;
+	printTable(results, boolFuncStrSimplified, boolFuncStrNonSimplified, true);
+
+	// close file
+	results << "\n\n";
+	results.close();
+}
+
+
+std::pair<std::vector<std::vector<int>>, std::vector<std::vector<int>>> expertDataMining::restoreFunction()
 {
 	// restore monotone Boolean function
 	// iterate over every hansel chain, and check each chain for its "lower one" vector, if it has one
@@ -1837,6 +2168,8 @@ std::pair<std::vector<std::vector<int>>, std::vector<std::vector<int>>> restoreF
 			if (hanselChainSet[i][j]._class)
 			{
 				bool first = false;
+
+				// change for k-value
 
 				// for every element 1 in the "lower" one vector, 
 				// that element is in a clause in the monotone boolean funciton
@@ -1936,7 +2269,7 @@ std::pair<std::vector<std::vector<int>>, std::vector<std::vector<int>>> restoreF
 }
 
 
-std::pair<std::string, std::string> functionToString(std::pair<std::vector<std::vector<int>>, std::vector<std::vector<int>>> boolFuncPair)
+std::pair<std::string, std::string> expertDataMining::functionToString(std::pair<std::vector<std::vector<int>>, std::vector<std::vector<int>>> boolFuncPair)
 {
 	// non-simplified
 	auto boolFunc = boolFuncPair.second;
@@ -1945,7 +2278,7 @@ std::pair<std::string, std::string> functionToString(std::pair<std::vector<std::
 	std::string boolFuncStrNonSimplified = "";
 
 	// convert not clause to string
-	auto checkNotClause = [&boolFunc](std::string& temp, int& i)
+	auto checkNotClause = [&boolFunc, this](std::string& temp, int& i)
 	{
 		if (boolFunc[i].size() > dimension)
 		{
@@ -1955,7 +2288,14 @@ std::pair<std::string, std::string> functionToString(std::pair<std::vector<std::
 			{
 				if (boolFunc[i][j])
 				{
-					temp += "x" + std::to_string(j + 1 - dimension);
+					if (parent_attribute == -1)
+					{
+						temp += "x" + std::to_string(j + 1 - dimension);
+					}
+					else
+					{
+						temp += "x" + std::to_string(parent_attribute) + "." + std::to_string(j + 1 - dimension);
+					}
 				}
 			}
 		}
@@ -1969,7 +2309,14 @@ std::pair<std::string, std::string> functionToString(std::pair<std::vector<std::
 		{
 			if (boolFunc[i][j])
 			{
-				temp += "x" + std::to_string(j + 1);
+				if (parent_attribute == -1)
+				{
+					temp += "x" + std::to_string(j + 1);
+				}
+				else
+				{
+					temp += "x" + std::to_string(parent_attribute) + "." + std::to_string(j + 1);
+				}
 			}
 		}
 
@@ -1999,7 +2346,14 @@ std::pair<std::string, std::string> functionToString(std::pair<std::vector<std::
 		{
 			if (boolFunc[i][j])
 			{
-				temp += "x" + std::to_string(j + 1);
+				if (parent_attribute == -1)
+				{
+					temp += "x" + std::to_string(j + 1);
+				}
+				else
+				{
+					temp += "x" + std::to_string(parent_attribute) + "." + std::to_string(j + 1);
+				}
 			}
 		}
 
@@ -2019,7 +2373,7 @@ std::pair<std::string, std::string> functionToString(std::pair<std::vector<std::
 }
 
 
-void printTable(std::fstream& results, std::string boolFuncStrSimplified, std::string boolFuncStrNonSimplified, bool include_violation)
+void expertDataMining::printTable(std::fstream& results, std::string boolFuncStrSimplified, std::string boolFuncStrNonSimplified, bool include_f_change)
 {
 	std::string askStr = "";
 	std::string answerStr = "";
@@ -2030,15 +2384,23 @@ void printTable(std::fstream& results, std::string boolFuncStrSimplified, std::s
 		askStr += std::to_string(orderOfAskingSummary[i] + 1) + "." + std::to_string(orderOfAskingSummary[i + 1] + 1) + ",";
 	}
 
-	results << "Monotone Boolean Function Simplified: " + boolFuncStrSimplified + "\n";
-	results << "Monotone Boolean Function Non-simplified:" + boolFuncStrNonSimplified + "\n";
+	if (non_monotone)
+	{
+		results << "Non-monotone Boolean Function Simplified: " + boolFuncStrSimplified + "\n";
+		results << "Non-monotone Boolean Function Non-simplified:" + boolFuncStrNonSimplified + "\n";
+	}
+	else
+	{
+		results << "Monotone Boolean Function Simplified: " + boolFuncStrSimplified + "\n";
+		results << "Monotone Boolean Function Non-simplified:" + boolFuncStrNonSimplified + "\n";
+	}
 	results << "Order of Questions:," + askStr + "\n";
 	results << "Answers:," + answerStr + "\n";
 	results << "Total Questions: " + std::to_string(questionsAsked) + "\n\n";
 	results << "Reference Number,Vector,";
 
 	// these orders are irrelevent for violation of monotonicity
-	if (!include_violation)
+	if (!include_f_change)
 	{
 		results << "Planned Query Order,"
 			<< "Updated Query Order,"
@@ -2048,7 +2410,7 @@ void printTable(std::fstream& results, std::string boolFuncStrSimplified, std::s
 
 	results << "Class,";
 
-	if (include_violation)
+	if (include_f_change)
 	{
 		results << "f-Change,";
 	}
@@ -2118,7 +2480,7 @@ void printTable(std::fstream& results, std::string boolFuncStrSimplified, std::s
 			results << std::to_string(i + 1) + "." + std::to_string(j + 1) + ",";
 			results << std::setfill('0') << std::setw(dimension) << vecStr << ",";
 			
-			if (!include_violation)
+			if (!include_f_change)
 			{
 				results << plannedQueryOrder << ",";
 				results << updatedQueryOrder << ",";
@@ -2128,7 +2490,7 @@ void printTable(std::fstream& results, std::string boolFuncStrSimplified, std::s
 
 			results << hanselChainSet[i][j]._class << ",";
 
-			if (include_violation)
+			if (include_f_change)
 			{
 				if (hanselChainSet[i][j].f_change)
 				{
@@ -2160,148 +2522,23 @@ void printTable(std::fstream& results, std::string boolFuncStrSimplified, std::s
 }
 
 
+void expertDataMining::startChildren(int i)
+{
+	for (auto child : children)
+	{
+		if (child.parent_attribute != -1)
+		{
+			child.start(i);
+		}
+	}
+}
+
 /// @brief main function
 /// @return 
 int main()
 {
-	// find real data
-	if (std::filesystem::exists(filename))
-	{
-		// FIX: dimension is already assigned if file is given
-		realData = true;
-	}
-
-	int option = init();
-	expertDataMining(option);
-
-	// print vectors and monotone Boolean Function to a file
-	std::fstream results;
-	results.open("results.csv", std::ios::out | std::ios::app);
-	results << "Attributes, k-value\n";
-
-	for (int i = 0; i < dimension; i++)
-	{
-		results << "x" << i + 1 << "," << kv_attributes[i] << "\n";
-	}
-
-	// Pilot Questions:
-	results << "\nPilot Questions:\n";
-	
-	// order
-	switch (option)
-	{
-	case 1:
-		results << "Longest Hansel Chain First\n";
-		break;
-
-	case 2:
-		results << "Manual Hansel Chain Order\n";
-		break;
-
-	case 3:
-		results << "Default Order\n";
-		break;
-
-	case 4:
-		results << "Any Vector Order\n";
-		break;
-
-	default:
-		results << "Shortest Hansel Chain First\n";
-		break;
-	}
-
-	// true attributes
-	if (trueAttributes.size() > 0)
-	{
-		results << "True Attributes:,";
-
-		for (int i = 0; i < (int)trueAttributes.size() - 1; i++)
-		{
-			results << "x" << trueAttributes[i] + 1 << ",";
-		}
-
-		results << "x" << trueAttributes[trueAttributes.size() - 1] + 1 << "\n";
-	}
-
-	// majority flag
-	if (usedMajorityFlag)
-	{
-		results << "Majority Flag used," << trueMajority << "\n";
-	}
-	else
-	{
-		results << "Majority Flag not used\n";
-	}
-
-	// chainJump
-	if (chainJump)
-	{
-		results << "Chain jump ";
-
-		if (top)
-		{
-			results << "top: start at the top and skip that chain if the oldVector class is 1 (revisit later)\n\n";
-		}
-		else
-		{
-			results << "bottom: start at the bottom and skip that chain if the oldVector class is 0 (revisit later)\n\n";
-		}
-	}
-	else
-	{
-		results << "Static\n\n";
-	}
-
-
-	// print original results
-	results << "Original Results\n";
-	auto boolFunc = restoreFunction();
-	auto str = functionToString(boolFunc);
-	std::string boolFuncStrSimplified = str.first;
-	std::string boolFuncStrNonSimplified = str.second;
-	printTable(results, boolFuncStrSimplified, boolFuncStrNonSimplified, false);
-
-	// reset variables
-	questionsAsked = 0;
-	orderOfAskingSummary.clear();
-
-	// print rectified results
-	results << "\nResults After Resolving Any Violations of Monotonicity\n";
-	violationOfMonotonicity();
-	boolFunc = restoreFunction();
-
-	if (realData)
-	{
-		std::cout << "Does the user want to change the attributes of the real data or to apply the Boolean function to the real data? (1/0): " << std::flush;
-		int c;
-		std::cin >> c;
-		std::cin.clear();
-		std::cin.ignore(1000, '\n');
-
-		// if new attributes have been added, real data must be expanded
-		auto dataset = addNewAttributesToRealData();
-
-		if (c)
-		{
-			changeAttributesOfRealData(dataset);
-		}
-		// apply monotoone Boolean Function on real data
-		// use boolFunc.first for simplified function
-		else
-		{
-			applyBoolFuncToRealData(boolFunc.first, dataset);
-		}
-	}
-
-	str = functionToString(boolFunc);
-	boolFuncStrSimplified = str.first;
-	boolFuncStrNonSimplified = str.second;
-	printTable(results, boolFuncStrSimplified, boolFuncStrNonSimplified, true);
-
-	// close file
-	results << "\n\n";
-	results.close();
+	auto edp = expertDataMining();
+	edp.start(0);
 
 	return EXIT_SUCCESS;
 }
