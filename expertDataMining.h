@@ -81,24 +81,31 @@ public:
 	// start sub-functions (grouping, top-down)
 
 	/// @brief the parent function, or attribute, of the current Boolean function, which represents the attribute that the current sub-function is for. E.g. 1 is attribute x1
-	int parent_attribute = -1;
+	std::string parent_attribute = "";
 
 	/// @brief a vector of child functions. The size of the vector is equal to the dimension. 
 	/// If a child is null then a sub-function does not exist for the attribute that corresponds to the index location (i = 0 == x1)
-	std::vector<expertDataMining> children;
+	//std::vector<expertDataMining> children;
 
 	// end sub-functions
 
 	// start parent-functions (grouping, bottom-up)
+
+	std::vector<std::vector<std::string>> associated_attributes;
 	
 	/// @brief the size of each group (number of sub-attributes). Used in a bottom-up approach
-	std::vector<expertDataMining> grouped_attributes;
+	//std::vector<expertDataMining> grouped_attributes;
 
 	/// @brief The parents of the current
 	//std::vector<expertDataMining> parents;
 
 	// end parent-functions
 
+	/// @brief the name of this Boolean function
+	char attributeSymbol = 'a';
+
+	std::string functionName = "";
+	
 	/// @brief file name of dataset of real data (not expert/ideal data). first line of file are attribute names
 	std::string filename = "dataset.csv";
 
@@ -126,6 +133,9 @@ public:
 
 	/// @brief list of attributes which must be true for a datapoint/vector to be true
 	std::vector<int> trueAttributes;
+
+	/// @brief the order of Hansel Chains to be used
+	int orderOption = -1;
 
 	/// @brief the total number of questions that were asked
 	int questionsAsked = 0;
@@ -294,7 +304,8 @@ public:
 
 
 	/// @brief get the necessary user inputs to run the program
-	int init();
+	/// @return vector starts with -1 if it is a list of children. Otherwise, first number is group size, next numbers are attributes in that group, and repeat
+	std::vector<int> init();
 
 
 	/// @brief call possibleExpansions on every single vector
@@ -333,39 +344,43 @@ public:
 
 
 	/// @brief constructor. Used for the main boolean function.
-	expertDataMining();
+	expertDataMining(char attributeSymbol);
 
 
-	/// @brief constructor. Used for sub-functions ina  top-down approach
+	/// @brief constructor. Used for sub-functions in a  top-down approach
 	/// @param parent_attribute is the number of the attribute that the expert data mining object is for
-	expertDataMining(int parent_attribute);
+	//expertDataMining(char attributeSymbol, std::string parent_attribute);
 
 	
 	/// @brief constructor. used to create parent function in a bottom-up approach
 	/// @param child_attributes is a list of the number of child attributes that each parent attribute has
-	expertDataMining(std::vector<expertDataMining> child_attributes);
+	//expertDataMining(char attributeSymbol, std::vector<expertDataMining> child_attributes);
 
 
 	/// @brief constructor. Used to create sub-functions for a parent functions in a bottom-up approach
 	/// @param parent_attribute is the number of the attribute that the expert data mining object is for
 	/// @paraam dimension is the dimension
-	expertDataMining(int parent_attribute, int dimension);
+	expertDataMining(char attributeSymbol, std::string parent_attribute, int dimension);
+
+
+	/// @brief initialize parent with associated attributes already given
+	/// @param attributeSymbol 
+	/// @param asociated_attributes 
+	expertDataMining(char attributeSymbol,std::vector<std::vector<std::string>> asociated_attributes);
 
 
 	/// @brief start the expert data mining sequence for any nested attributes
 	/// @param i the counter for the number of levels of attributes
-	void startChildren(int i);
+	//void startChildren(int i);
 	
 
 	/// @brief print results to file
-	/// @param option the ordering of questions as returned by init()
-	/// @param iteration the iteration of the expert data mining sequence, or the level of nested attributes (0 if its the top level, or the overall Boolean function)
-	void printToFile(int option, int iteration);
+	/// @param results the results file
+	void printToFile(std::fstream& results);
 
 
 	/// @brief start expert data mining sequence
-	/// @param iteration the iteration of the expert data mining sequence, or the level of nested attributes (0 if its the top level, or the overall Boolean function)
-	void start(int iteration);
+	void start();
 };
 
 /// @brief << overload for printing std::vector<int>

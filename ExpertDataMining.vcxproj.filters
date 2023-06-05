@@ -18,9 +18,15 @@
     <ClCompile Include="expertDataMining.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="edmDriver.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="expertDataMining.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="edmDriver.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

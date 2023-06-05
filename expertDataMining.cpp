@@ -1620,9 +1620,9 @@ void expertDataMining::numberAssignment()
 }
 
 
-int expertDataMining::init()
+std::vector<int> expertDataMining::init()
 {
-	std::cout << "Expert Data Mining with Hansel Chains.\n" << std::endl;
+	std::vector<int> genericParentOrChildList;
 
 	if (dimension <= 0) // only executed when the constructor was not initialized with a child_attributes 
 	{
@@ -1634,7 +1634,6 @@ int expertDataMining::init()
 
 		attributes.resize(dimension);
 		kv_attributes.resize(dimension);
-		children.resize(dimension);
 
 		// start sub-functions
 		std::cout << "Are there any nested attributes (sub-functions) for this dataset?"
@@ -1648,22 +1647,22 @@ int expertDataMining::init()
 		std::cout << "Please enter: " << std::flush;
 		std::string temp;
 		std::getline(std::cin, temp);
+		std::cin.clear();
+		std::cin.ignore(1000, '\n');
+
 		auto tokens = parse_input(',', temp);
 
 		if (!tokens.empty() && tokens[0] != "-1")
 		{
+			genericParentOrChildList.reserve((int)tokens.size() + 1);
+			genericParentOrChildList.push_back(-1);
 
 			for (auto token : tokens)
 			{
 				try
 				{
 					int i = stoi(token);
-
-					if (i < dimension)
-					{
-						auto subFunction = expertDataMining(i + 1);
-						children[i] = subFunction;
-					}
+					genericParentOrChildList.push_back(i);
 				}
 				catch (std::exception& e)
 				{
@@ -1681,37 +1680,45 @@ int expertDataMining::init()
 			<< "\nIf not, then enter -1. If yes, please enter how many groups there are (please keep this to 2-5 groups): " << std::endl;
 		int groups;
 		std::cin >> groups;
+		std::cin.clear();
+		std::cin.ignore(1000, '\n');
 		
 		if (groups > 0)
 		{
-			grouped_attributes.resize(groups);
-			std::vector<int> group_sizes(groups);
-			int grandchild_counter = 0;
+			std::cout << "Please note that all attributes must be in a group since this option was chosen, even if that group is of attributes that are unrelated." << std::endl;
+
+			genericParentOrChildList.reserve(groups + dimension);
 
 			for (int i = 0; i < groups; i++)
 			{
-				std::cout << "Please enter the number of attributes that are in group " << i + 1 << ": " << std::flush;
+				std::cout << "Please enter a comma-delimited list of what attributes are in group " << i + 1 << ": " << std::flush;
+			
+				std::string temp;
+				std::getline(std::cin, temp);
+				std::cin.clear();
+				std::cin.ignore(1000, '\n');
 
-				try
+				auto tokens = parse_input(',', temp);
+
+				genericParentOrChildList.push_back((int)tokens.size()); // group size
+
+				for (auto token : tokens)
 				{
-					std::cin >> group_sizes[i];
-					grouped_attributes[i] = expertDataMining(i + 1, group_sizes[i]);
-
-					for (int j = 0; j < group_sizes[i] && grandchild_counter < (int)children.size(); j++, grandchild_counter++)
+					try
 					{
-						grouped_attributes[i].children[j] = children[grandchild_counter];
+						genericParentOrChildList.push_back(stoi(token)); // each attribute in this group
 					}
-				}
-				catch (std::exception& e)
-				{
-					std::cerr << "User input fail. " << e.what() << std::endl;
+					catch (std::exception& e)
+					{
+						std::cerr << "User input fail. " << e.what() << std::endl;
+					}
 				}
 			}
 
 			std::cout << "Since parent attributes have been specified (the groupings), the expert data mining process will start with those attributes first." << std::endl;
-
-			return -1;
 		}
+
+		return genericParentOrChildList; // return early since this object will be popped out of the tree anyway
 	}
 
 	// name every attribute to reduce confusion for user
@@ -1743,7 +1750,6 @@ int expertDataMining::init()
 	chainsVisited.resize(numChains);
 
 	// let the user determine the order of the Hansel Chains
-	int option;
 	std::cout << "\nWhat order to use for the Hansel Chains?";
 	std::cout << "\n0 - Shortest Hansel Chain First";
 	std::cout << "\n1 - Longest Hansel Chain First";
@@ -1751,7 +1757,15 @@ int expertDataMining::init()
 	std::cout << "\n3 - Default Hansel Chain Algorithm Order";
 	//std::cout << "\n4 - Any Vector Order"; // NOTE: not implemented and likely won't be, but leave it here anyway
 	std::cout << "\nEnter: " << std::flush;
-	std::cin >> option;
+
+	try
+	{
+		std::cin >> orderOption;
+	}
+	catch (std::exception& e)
+	{
+		std::cerr << "user input fail. " << e.what() << std::endl;
+	}
 
 	// is there any attribute which must be true for answer to be true?
 	std::cout << "\nIs there any attribute which must be true for the datapoint to be true?"
@@ -1765,7 +1779,16 @@ int expertDataMining::init()
 
 	std::cout << "Enter: " << std::flush;
 	std::string temp = "";
-	std::cin >> temp;
+
+	try
+	{
+		std::cin >> temp;
+	}
+	catch (std::exception& e)
+	{
+		std::cerr << "user input fail. " << e.what() << std::endl;
+	}
+
 	size_t pos = 0;
 	std::string token;
 
@@ -1795,67 +1818,51 @@ int expertDataMining::init()
 
 	calculateAllPossibleExpansions();
 
-	return option;
+	return genericParentOrChildList;
 }
 
 
-expertDataMining::expertDataMining() {}
-
-
-expertDataMining::expertDataMining(int parent_attribute) // used when creating children
+expertDataMining::expertDataMining(char attributeSymbol) 
 {
-	this->parent_attribute = parent_attribute;
+	this->attributeSymbol = attributeSymbol;
 }
 
 
-expertDataMining::expertDataMining(std::vector<expertDataMining> child_attributes) // used when creating parent
+expertDataMining::expertDataMining(char attributeSymbol, std::string parent_attribute, int dimension) // used in top down approach after parent is constructed, create the children for that parent
 {
-	dimension = (int)child_attributes.size();
-
-	attributes.resize(dimension);
-	kv_attributes.resize(dimension);
-	children.resize(dimension);
-	
-	for (int i = 0; i < dimension; i++)
-	{
-		children[i] = child_attributes[i];
-	}
-}
-
-
-expertDataMining::expertDataMining(int parent_attribute, int dimension) // used when creating parent, and then assigning children
-{
+	this->attributeSymbol = attributeSymbol;
 	this->parent_attribute = parent_attribute;
 	this->dimension = dimension;
 
 	attributes.resize(dimension);
 	kv_attributes.resize(dimension);
-	children.resize(dimension);
+	associated_attributes.resize(dimension);
 }
 
 
-void expertDataMining::start(int iteration)
+expertDataMining::expertDataMining(char attributeSymbol, std::vector<std::vector<std::string>> associated_attributes) // used in top down approach, creating parent
 {
-	if (parent_attribute != -1)
+	this->attributeSymbol = attributeSymbol;
+	this->associated_attributes = associated_attributes;
+	dimension = (int)associated_attributes.size();
+
+	attributes.resize(dimension);
+	kv_attributes.resize(dimension);
+}
+
+
+void expertDataMining::start()
+{
+	if (parent_attribute != "")
 	{
-		std::cout << "This dataset represents the nested attributes for the attribute x" << parent_attribute << std::endl;
+		std::cout << "This dataset represents the nested attributes for the attribute " << parent_attribute << " of the function that is one level higher."  << std::endl;
 	}
 
 	// find real data
-	if (parent_attribute != -1 && std::filesystem::exists(filename))
+	if (parent_attribute != "" && std::filesystem::exists(filename))
 	{
 		// FIX: dimension is already assigned if file is given
 		realData = true;
-	}
-
-	int option = init();
-
-	if (option == -1)
-	{
-		auto parent = expertDataMining(grouped_attributes);
-		parent.start(iteration - 1);
-
-		return;
 	}
 
 	// order vectors and ask questions
@@ -1865,7 +1872,7 @@ void expertDataMining::start(int iteration)
 		std::cout << "\nEnter: " << std::flush;
 		std::cin >> top;
 
-		switch (option)
+		switch (orderOption)
 		{
 			// longest chain first order
 		case 1:
@@ -1918,7 +1925,7 @@ void expertDataMining::start(int iteration)
 	}
 	else
 	{
-		switch (option)
+		switch (orderOption)
 		{
 			// longest chain first order
 		case 1:
@@ -1969,72 +1976,46 @@ void expertDataMining::start(int iteration)
 			break;
 		}
 	}
-
-	printToFile(option, iteration);
-
-	startChildren(iteration + 1);
 }
 
 
-void expertDataMining::printToFile(int option, int iteration)
+void expertDataMining::printToFile(std::fstream& results)
 {
 	// print vectors and monotone Boolean Function to a file
-	std::fstream results;
-	std::string name = "results_of_function_" + std::to_string(iteration) + ".csv";
-
-	results.open(name, std::ios::out | std::ios::app);
 	
-	if (iteration > 0)
+	if (parent_attribute != "")
 	{
-		results << "This results file represents the nested function that is associated with attribute x" << parent_attribute
-			<< " of the function that is one level higher.\n\n"
-			<< "x" << parent_attribute << "->,";
-
-		for (int i = 0; i < dimension; i++)
-		{
-			results << "x" << parent_attribute << "." << i + 1 << ",";
-		}
-
-			results << "\n\n";
+		results << "This results file represents the nested function that is associated with attribute " << parent_attribute
+			<< " of the function that is one level higher.\n\n";
 	}
 
 	results << "Attributes, k-value, sub-attributes\n";
 
 	for (int i = 0; i < dimension; i++)
 	{
-		if (iteration <= 0)
-		{
-			results << "x" << i + 1 << "," << kv_attributes[i];
+		results << attributeSymbol << i + 1 << "," << kv_attributes[i] << ",";
 
-			if (children[i].parent_attribute != -1)
+		if (!associated_attributes[i].empty())
+		{
+			for (auto associateAttr : associated_attributes[i])
 			{
-				results << ",True (defined in file one level up).\n";
-			}
-			else
-			{
-				results << ",False;\n";
+				results << associateAttr << ",";
 			}
 		}
 		else
 		{
-			results << "x" << parent_attribute << "." << i + 1 << "," << kv_attributes[i];
-
-			if (children[i].parent_attribute != -1)
-			{
-				results << ",True (defined in file one level up).\n";
-			}
-			else
-			{
-				results << ",False\n";
-			}
+			results << "None";
 		}
+
+		results << "\n";
+
 	}
 
 	// Pilot Questions:
 	results << "\nPilot Questions:\n";
 
 	// order
-	switch (option)
+	switch (orderOption)
 	{
 	case 1:
 		results << "Longest Hansel Chain First\n";
@@ -2064,10 +2045,10 @@ void expertDataMining::printToFile(int option, int iteration)
 
 		for (int i = 0; i < (int)trueAttributes.size() - 1; i++)
 		{
-			results << "x" << trueAttributes[i] + 1 << ",";
+			results << attributeSymbol << trueAttributes[i] + 1 << ",";
 		}
 
-		results << "x" << trueAttributes[trueAttributes.size() - 1] + 1 << "\n";
+		results << attributeSymbol << trueAttributes[trueAttributes.size() - 1] + 1 << "\n";
 	}
 
 	// majority flag
@@ -2288,14 +2269,15 @@ std::pair<std::string, std::string> expertDataMining::functionToString(std::pair
 			{
 				if (boolFunc[i][j])
 				{
-					if (parent_attribute == -1)
-					{
-						temp += "x" + std::to_string(j + 1 - dimension);
-					}
-					else
-					{
-						temp += "x" + std::to_string(parent_attribute) + "." + std::to_string(j + 1 - dimension);
-					}
+					// FIX:: change to just use attr symbol
+					//if (parent_attribute == "")
+					//{
+						temp += attributeSymbol + std::to_string(j + 1 - dimension);
+					//}
+					//else
+					//{
+					//	temp += parent_attribute + "." + std::to_string(j + 1 - dimension);
+					//}
 				}
 			}
 		}
@@ -2309,14 +2291,14 @@ std::pair<std::string, std::string> expertDataMining::functionToString(std::pair
 		{
 			if (boolFunc[i][j])
 			{
-				if (parent_attribute == -1)
-				{
-					temp += "x" + std::to_string(j + 1);
-				}
-				else
-				{
-					temp += "x" + std::to_string(parent_attribute) + "." + std::to_string(j + 1);
-				}
+				//if (parent_attribute == "")
+				//{
+					temp += attributeSymbol + std::to_string(j + 1);
+				//}
+				//else
+				//{
+					//temp += parent_attribute + "." + std::to_string(j + 1);
+				//}
 			}
 		}
 
@@ -2346,14 +2328,14 @@ std::pair<std::string, std::string> expertDataMining::functionToString(std::pair
 		{
 			if (boolFunc[i][j])
 			{
-				if (parent_attribute == -1)
-				{
-					temp += "x" + std::to_string(j + 1);
-				}
-				else
-				{
-					temp += "x" + std::to_string(parent_attribute) + "." + std::to_string(j + 1);
-				}
+				//if (parent_attribute == "")
+				//{
+					temp += attributeSymbol + std::to_string(j + 1);
+				//}
+				//else
+				//{
+					//temp += parent_attribute + "." + std::to_string(j + 1);
+				//}
 			}
 		}
 
@@ -2519,26 +2501,4 @@ void expertDataMining::printTable(std::fstream& results, std::string boolFuncStr
 	}
 
 	results << "\n";
-}
-
-
-void expertDataMining::startChildren(int i)
-{
-	for (auto child : children)
-	{
-		if (child.parent_attribute != -1)
-		{
-			child.start(i);
-		}
-	}
-}
-
-/// @brief main function
-/// @return 
-int main()
-{
-	auto edp = expertDataMining();
-	edp.start(0);
-
-	return EXIT_SUCCESS;
 }
