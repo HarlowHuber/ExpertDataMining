@@ -78,32 +78,32 @@ public:
 		int plannedQueryOrder = 0;
 	};
 
-	// start sub-functions (grouping, top-down)
+
+	struct attribute
+	{
+		std::string name = "";
+		int kv = 2;
+		int trueValue = -1;
+		int trueIndex = -1;
+	};
+
+
+	/// @brief flag for developer. Ask KV questions, yes or no?
+	bool askKV = true;
+
+	/// @brief by default, this is 2 (a Boolean function), but sometimes it could be a k-value function in the case of nested functions
+	int function_kv = -1;
 
 	/// @brief the parent function, or attribute, of the current Boolean function, which represents the attribute that the current sub-function is for. E.g. 1 is attribute x1
 	std::string parent_attribute = "";
 
-	/// @brief a vector of child functions. The size of the vector is equal to the dimension. 
-	/// If a child is null then a sub-function does not exist for the attribute that corresponds to the index location (i = 0 == x1)
-	//std::vector<expertDataMining> children;
+	/// @brief these are the sub-attributes of the current Boolean function. Index location 0 is for the subattributes of parent attribute x1 (of this Boolean function)
+	std::vector<std::vector<std::string>> childAttributes;
 
-	// end sub-functions
-
-	// start parent-functions (grouping, bottom-up)
-
-	std::vector<std::vector<std::string>> associated_attributes;
-	
-	/// @brief the size of each group (number of sub-attributes). Used in a bottom-up approach
-	//std::vector<expertDataMining> grouped_attributes;
-
-	/// @brief The parents of the current
-	//std::vector<expertDataMining> parents;
-
-	// end parent-functions
-
-	/// @brief the name of this Boolean function
+	/// @brief the symbols that is used for this Boolean function
 	char attributeSymbol = 'a';
 
+	/// @brief name of this Boolean function
 	std::string functionName = "";
 	
 	/// @brief file name of dataset of real data (not expert/ideal data). first line of file are attribute names
@@ -119,7 +119,7 @@ public:
 	std::vector<std::vector<dvector>> hanselChainSet;
 
 	/// @brief k-value for each attribute of the dataset
-	std::vector<int> kv_attributes;
+	//std::vector<int> kv_attributes;
 
 	/// @brief order of the Hansel Chains
 	std::vector<int> hanselChainOrder;
@@ -131,8 +131,8 @@ public:
 	/// used for the summary in the results output.
 	std::vector<int> orderOfAskingSummary;
 
-	/// @brief list of attributes which must be true for a datapoint/vector to be true
-	std::vector<int> trueAttributes;
+	/// @brief list of attributes which must be true for a datapoint/vector to be true. List of index locations
+	//std::vector<int> trueAttributes;
 
 	/// @brief the order of Hansel Chains to be used
 	int orderOption = -1;
@@ -171,7 +171,7 @@ public:
 	int dimension = -1;
 
 	/// @brief the name of the attributes of the datapoint
-	std::vector<std::string> attributes;
+	std::vector<attribute> attributes;
 
 	/// @brief represents what vectors to rectify when adding new attributes
 	std::vector<int> addNewAttributesFor;
@@ -225,7 +225,7 @@ public:
 	bool chainJumpMajorityFlagHelper(int i);
 
 
-	/// @brief the order of questions in a chainJump pattern (wthe assigned order as default, but with chainJump capabilities)
+	/// @brief the order of questions in a chainJump pattern (the assigned order as default, but with chainJump capabilities)
 	void chainJumpOrderQuestionsFunc();
 
 
@@ -237,12 +237,12 @@ public:
 	/// Expandable expansions are expansions which are used. Unexpandable expansions are expansions which are unused 
 	/// because either the vector that would have been expanded was already expanded or if the vector of origin's 
 	/// class is different than that of the expansion (e.g. a vector of class 1 with an expansion of class 0).
-	/// @param vector_class either 1 or 0
+	/// @param newValue the new value at the point k. Determined by k-value for that attribute, so newValue is between 0 and k
 	/// @param i the Hansel Chain
 	/// @param j a vector in the Hansel Chain
-	/// @param k an element in the vector
+	/// @param p an element in the vector that was determined to be changed
 	/// @param startChain equal to either i for a standard ordering of questions, or 0 for majority vector questions.
-	void possibleExpansions(int vector_class, int i, int j, int k, int startChain);
+	void possibleExpansions(int newValue, int i, int j, int p, int startChain);
 
 
 	/// @brief checks the possible expansions for a given vector (i, j), and expands those vectors if possible.
@@ -304,8 +304,11 @@ public:
 
 
 	/// @brief get the necessary user inputs to run the program
-	/// @return vector starts with -1 if it is a list of children. Otherwise, first number is group size, next numbers are attributes in that group, and repeat
+	/// @return vector starts with -1 if it is a list of attributes with child functions. Otherwise, first number is group size, next numbers are attributes in that group, and repeat
 	std::vector<int> init();
+
+
+	void findTrueAttributes();
 
 
 	/// @brief call possibleExpansions on every single vector
@@ -363,10 +366,18 @@ public:
 	expertDataMining(char attributeSymbol, std::string parent_attribute, int dimension);
 
 
+	/// @brief similar constructor as above, but with a function k-value
+	/// @param attributeSymbol 
+	/// @param parent_attribute 
+	/// @param dimension 
+	/// @param function_kv
+	expertDataMining(char attributeSymbol, std::string parent_attribute, int dimension, int function_kv);
+
+
 	/// @brief initialize parent with associated attributes already given
 	/// @param attributeSymbol 
 	/// @param asociated_attributes 
-	expertDataMining(char attributeSymbol,std::vector<std::vector<std::string>> asociated_attributes);
+	expertDataMining(char attributeSymbol,std::vector<std::vector<std::string>> childAttributes);
 
 
 	/// @brief start the expert data mining sequence for any nested attributes

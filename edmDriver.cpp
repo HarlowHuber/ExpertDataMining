@@ -43,6 +43,8 @@ void edmDriver::createTree(int index)
 		// creat edm objects for each child;
 		for (int i = 1; i < childList.size(); i++)
 		{
+			int k = tree[index].edm.attributes[childList[i] - 1].kv; // this k-value must be the function k-value of the child function. must subtract one for index location...
+
 			std::string parentAttribute = tree[index].edm.attributeSymbol + std::to_string(childList[i]);
 
 			std::cout << "What is the dimension of the child function (aka sub-function that belongs to the parent attribute " 
@@ -52,7 +54,17 @@ void edmDriver::createTree(int index)
 
 			try
 			{
-				auto child = expertDataMining(attributeSymbols[currentAttrSymbol++], parentAttribute, c); // constructor with parent attribute
+				expertDataMining child = NULL;
+
+				if (k > 2)
+				{
+					child = expertDataMining(attributeSymbols[currentAttrSymbol++], parentAttribute, c, k); // constructor with parent attribute and given function k
+				}
+				else
+				{
+					child = expertDataMining(attributeSymbols[currentAttrSymbol++], parentAttribute, c); // constructor with parent attribute
+				}
+
 				addChild(child, index);
 			}
 			catch (std::exception& e)
@@ -71,7 +83,7 @@ void edmDriver::createTree(int index)
 
 		auto parentList = genericParentOrChildList;
 
-		std::vector<std::vector<std::string>> associatedAttributes; // the associated attributes for each attribute of the parent function
+		std::vector<std::vector<std::string>> childAttributes; // the associated child attributes for each attribute of the parent function
 
 		for (int i = 0; i < (int)parentList.size(); i++)
 		{
@@ -84,23 +96,30 @@ void edmDriver::createTree(int index)
 			}
 
 			i += parentList[i];
-			associatedAttributes.push_back(group);
+			childAttributes.push_back(group);
 		}
 
-		auto parent = expertDataMining(attributeSymbols[currentAttrSymbol++], associatedAttributes);
+		auto parent = expertDataMining(attributeSymbols[currentAttrSymbol++], childAttributes); // dimension is size of childAttributes
 		addParent(parent, oldNode);
 
-		for (int i = 0; i < (int)associatedAttributes.size(); i++)
+		// DO THIS HERE AGAIN SO WE CAN GET K-VALUE AND THEN INITIALIZE CHILDREN WITH K-VALUE!!!!!
+		auto genericParentOrChildList = tree[index].edm.init();
+
+		for (int i = 0; i < (int)childAttributes.size(); i++)
 		{
+			// get k for each child attribute
+			// if there is something in the row, then the child function is initialized with function value of k that corresponds to that row...
+			int k = tree[index].edm.attributes[i].kv; // attributes at i because dimension of childAttributes and the parent match
+
 			std::string parentAttribute = tree[index].edm.attributeSymbol + std::to_string(i + 1);
-			auto child = expertDataMining(attributeSymbols[currentAttrSymbol++], parentAttribute, (int)associatedAttributes[i].size());
+			auto child = expertDataMining(attributeSymbols[currentAttrSymbol++], parentAttribute, (int)childAttributes[i].size(), k);
 			addChild(child, index);
 		}
 
 		//currentAttrSymbol++;
-		index--; // bc popped
+		// commented out because we init parent above //index--; // bc popped 
 		std::cout << "The following questions will be about the groups (parent attributes aka super attributes) that were just created. "
-			<< "Since we just created groups from those attributes, the previous function will be ovewritten by the new parent function and the new child functions." << std::endl;
+			<< "Since we just created groups from those attributes, the previous function will be overwritten by the new parent function and the new child functions." << std::endl;
 	}
 
 	createTree(++index);
@@ -222,23 +241,27 @@ void edmDriver::printTreeChildren(std::vector<int> childrenIndices)
 
 void edmDriver::printTreeHierarchy(int i)
 {
-	// print to hierarchy
+	if (tree[i].edm.childAttributes.empty())
+	{
+		return; // return if there are no associated attributes 
+	}
 
+	// print to hierarchy
 	// iterate over each attribute
 	for (int j = 0; j < tree[i].edm.dimension; j++)
 	{
 		hierarchy << "f(" << tree[i].edm.attributeSymbol << j + 1 << ") = ";
 
 		// iterate over each associate attribute per the above attribute
-		if (tree[i].edm.associated_attributes[j].empty())
+		if (tree[i].edm.childAttributes[j].empty())
 		{
 			hierarchy << tree[i].edm.attributeSymbol << j + 1;
 		}
 		else
 		{
-			for (int k = 0; k < tree[i].edm.associated_attributes[j].size(); k++)
+			for (int k = 0; k < tree[i].edm.childAttributes[j].size(); k++)
 			{
-				hierarchy << tree[i].edm.associated_attributes[j][k] << ",";
+				hierarchy << tree[i].edm.childAttributes[j][k] << ",";
 			}
 		}
 
@@ -299,7 +322,7 @@ void edmDriver::addParent(expertDataMining& parent, Node& oldNode)
 		}
 
 		int s = stoi(parent.parent_attribute.substr(1)) - 1;
-		tree[tree.back().parent].edm.associated_attributes[s] = group;
+		tree[tree.back().parent].edm.childAttributes[s] = group;
 	}
 }
 

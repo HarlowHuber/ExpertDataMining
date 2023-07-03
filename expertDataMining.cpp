@@ -97,7 +97,7 @@ void expertDataMining::calculateHanselChains(int vector_dimension)
 	// For n dimensions, iterate through to generate chains and
 	for (int dim_num = 0; dim_num < vector_dimension; dim_num++)
 	{
-		int num = kv_attributes[dim_num];
+		int num = attributes[dim_num].kv;
 
 		// Need a base chain to use for genChains
 		if (dim_num == 0)
@@ -149,10 +149,10 @@ void expertDataMining::askMajorityFlag()
 	std::cout << "Enter: " << std::flush;
 	std::cin >> useMajorityFlag;
 
-	findMajorityVectors();
-
 	if (useMajorityFlag)
 	{
+		findMajorityVectors();
+
 		usedMajorityFlag = true;
 		int foundTrueMajority = 0;
 
@@ -297,6 +297,8 @@ void expertDataMining::askMajorityFlag()
 				}
 			}
 		}
+
+		std::cout << "\nEnd majority flagged questions." << std::endl;
 	}
 	else
 	{
@@ -328,22 +330,76 @@ void expertDataMining::askMajorityFlag()
 
 void expertDataMining::findMajorityVectors()
 {
+	// first used to determine if middlepoints can be used
+	// then, if middlepoints should be used (user selected that option).
+	bool middlePoint = false; 
+
+	for (auto attr : attributes)
+	{
+		if (attr.kv > 2)
+		{
+			middlePoint = true;
+			break;
+		}
+	}
+
+	if (middlePoint)
+	{
+		std::cout << "Does the user want to use middle points to determine what constitutes a majority datapoint? (1/0) Please Enter: " << std::flush;
+		int c;
+		std::cin >> c;
+		
+		if (c)
+		{
+			middlePoint = true;
+		}
+		else
+		{
+			middlePoint = false;
+		}
+	}
+
+	// calculate max hamming norm
+	int max_hamming_norm = 0;
+
+	for (auto attribute : attributes)
+	{
+		max_hamming_norm += attribute.kv - 1;
+	}
+
+	// the number of points that need a value greater than 0 for the datapoint to be qualified as a "majority datapoint"
+	int majority = (max_hamming_norm / 2) + (max_hamming_norm % 2); 
+
 	// find the "majority vectors"
 	for (int i = 0; i < numChains; i++)
 	{
 		for (int j = 0; j < (int)hanselChainSet[i].size(); j++)
 		{
 			int hamming_norm = 0;
+			int points = 0; // counts how many points in the datapoint have a value greater than 0
 
 			for (int k = 0; k < dimension; k++)
 			{
-				if (hanselChainSet[i][j].dataPoint[k] == 1)
+				if (hanselChainSet[i][j].dataPoint[k] > 0)
 				{
-					hamming_norm++;
+					hamming_norm += hanselChainSet[i][j].dataPoint[k];
+					points++;
 				}
 			}
 
-			if (hamming_norm == ((dimension / 2) + (dimension % 2)))
+			// if middle points are used, then the number of points need to be the same or more as the majority of the datapoint
+			if (middlePoint)
+			{
+				// these two if statements need to be separated 
+				if (hamming_norm == majority && points >= ((dimension / 2) + (dimension % 2)))
+				{
+					majorityVectors.push_back(i);
+					majorityVectors.push_back(j);
+					majorityVectors.push_back(0);
+					hanselChainSet[i][j].majorityFlag = true;
+				}
+			}
+			else if (hamming_norm == majority)
 			{
 				majorityVectors.push_back(i);
 				majorityVectors.push_back(j);
@@ -363,7 +419,8 @@ bool expertDataMining::questionFunc(int i, int j, int& vector_class)
 		hanselChainSet[i][j].updatedQueryOrder = questionOrder;
 		questionOrder++;
 	}
-	// skip if oldVector is majority flag and usedMajorityFlag, was visited, and updatedQuery Order > 0 
+
+	// skip if vector is majority flag and usedMajorityFlag, was visited, and updatedQuery Order > 0 
 	// (if updated query order is 0, then visited (expanded), but not asked, so retrieve class and do immediete expansions)
 	// Otherwise, question may be asked.
 	else
@@ -371,9 +428,9 @@ bool expertDataMining::questionFunc(int i, int j, int& vector_class)
 		return true;
 	}
 
-	// if oldVector has not been visited, then ask user class
+	// if vector has not been visited, then ask user class
 	// else, retrieve class
-	if (!hanselChainSet[i][j].visited)
+	if (!hanselChainSet[i][j].visited || (hanselChainSet[i][j]._class && hanselChainSet[i][j]._class < function_kv - 1)) // or class is not 0 and class is less than possible k-value
 	{
 		vector_class = askingOfQuestion(i, j);
 	}
@@ -459,7 +516,7 @@ void expertDataMining::f_change_check()
 	}
 
 	std::string temp;
-	std::cout << "Please enter the number of any vectors which need any changes in a comma-separalited list (e.g. 1.1, 3.2, ..., 7.4): " << std::flush;
+	std::cout << "Please enter the number of any vectors which need any changes in a comma-separated list (e.g. 1.1, 3.2, ..., 7.4): " << std::flush;
 
 	try
 	{
@@ -526,6 +583,8 @@ void expertDataMining::checkViolationOfMonotonicityMethod(int i, int j)
 		vector_class = 1;
 	}
 
+	hanselChainSet[i][j]._class = vector_class; // re-assign here. used to be in the lambda func
+
 	// check if the change needs to be fixed in the first place
 	// if the new vector class is supposed to be 1 and the vector above it is also one, then there is no violation
 	// however, we still need to check those other vectors that are not monotonically related to the changed vector
@@ -539,7 +598,7 @@ void expertDataMining::checkViolationOfMonotonicityMethod(int i, int j)
 			{
 				vector_class = askingOfQuestion(vector->number.first - 1, vector->number.second - 1);
 
-				// if the class changed from 0 to 1 for those vectors which were re-asked due to being expanded by the source of the f-change,
+				// if the class changed from 0 to 1 (or higher...) for those vectors which were re-asked due to being expanded by the source of the f-change,
 				// then, we need to fix the expansions for those vectors.
 				if (vector_class != 0)
 				{
@@ -548,7 +607,6 @@ void expertDataMining::checkViolationOfMonotonicityMethod(int i, int j)
 			}
 
 			hanselChainSet[i][j].expanded_zero.clear();
-			hanselChainSet[i][j]._class = vector_class;
 		};
 
 		try
@@ -591,7 +649,6 @@ void expertDataMining::checkViolationOfMonotonicityMethod(int i, int j)
 			}
 
 			hanselChainSet[i][j].expanded_one.clear();
-			hanselChainSet[i][j]._class = vector_class;
 		};
 
 		try
@@ -895,9 +952,27 @@ void expertDataMining::fixViolationOfMonotonicityClass(int i, int j, int vector_
 void expertDataMining::fixViolationOfMonotonicityAddAttr()
 {
 	dimension++;
-	attributes.push_back("");
-	attributes[attributes.size() - 1] = 'a' + dimension - 1; // to string does not work for some reason... have to do this method
-	kv_attributes.push_back(2);
+	attributes.push_back(attribute{});
+	attributes[attributes.size() - 1].name = attributeSymbol + std::to_string(dimension - 1); // will this work?
+
+	// ask the k-value of the new attribute here
+	if (askKV)
+	{
+		std::cout << "What is the k-value of the new attribute? Please enter: " << std::flush;
+
+		try 
+		{
+			std::cin >> attributes[attributes.size() - 1].kv;
+		}
+		catch (std::exception& e)
+		{
+			std::cerr << e.what() << std::endl;
+		}
+	}
+	else
+	{
+		attributes[attributes.size() - 1].kv = 2;
+	}
 	auto oldChains = hanselChainSet;
 	hanselChainSet.clear();
 	//std::cout << "What is the name of the new attribute?: " << std::flush;
@@ -931,11 +1006,15 @@ void expertDataMining::fixViolationOfMonotonicityAddAttr()
 						}
 					}
 
+
+					// does function k-value change anything below? anything else
+					// 
+					// 
 					// if no difference (besides the new attribute)
-					// it is assumed that the new attribute with a value of 1, in addition to an already true data point, will be true.
+					// it is assumed that the new attribute with a value equal to or greater than 1, in addition to an already true data point, will be true.
 					// else, it can be assumed that a new attribute with a value of 0, in addition to an already false data point will be true
 					if (!difference &&
-						(hanselChainSet[k][l].dataPoint[dimension - 1] == 1 && oldVector._class == 1 ||
+						(hanselChainSet[k][l].dataPoint[dimension - 1] >= 1 && oldVector._class >= 1 ||
 							hanselChainSet[k][l].dataPoint[dimension - 1] == 0 && oldVector._class == 0))
 					{
 						hanselChainSet[k][l].visited = true;
@@ -1415,35 +1494,33 @@ void expertDataMining::calculateAllPossibleExpansions()
 	{
 		for (int j = 0; j < (int)hanselChainSet[i].size(); j++)
 		{
-			for (int k = 0; k < dimension; k++)
+			for (int p = 0; p < dimension; p++)
 			{
 				// add k-value here
-				for (int d = 0; d < kv_attributes[k]; d++)
+				for (int d = 0; d < attributes[p].kv; d++)
 				{
-					possibleExpansions(d, i, j, k, 0);
+					possibleExpansions(d, i, j, p, 0);
 				}
 
-				/*
-				* instead of the k-value loop above, this used to just be:
-				
-				possibleExpansions(1, i, j, k, 0);
-				possibleExpansions(0, i, j, k, 0);
-
-				*/
+				// used to be just this for boolean
+				//possibleExpansions(1, i, j, p, 0);
+				//possibleExpansions(0, i, j, p, 0);
 			}
 		}
 	}
 }
 
 
-void expertDataMining::possibleExpansions(int vector_class, int i, int j, int k, int startChain)
+void expertDataMining::possibleExpansions(int newValue, int i, int j, int p, int startChain)
 {
+	int oldValue = hanselChainSet[i][j].dataPoint[p];
+
 	// possible expansions from successive chains for a given class
-	if (vector_class != hanselChainSet[i][j].dataPoint[k])
+	if (newValue != oldValue)
 	{
 		dvector expanded;
 		expanded.dataPoint = hanselChainSet[i][j].dataPoint;
-		expanded.dataPoint[k] = vector_class;
+		expanded.dataPoint[p] = newValue;
 
 		// starting in the current chain, search for expanded oldVector
 		for (int hc = startChain; hc < numChains; hc++)
@@ -1454,10 +1531,13 @@ void expertDataMining::possibleExpansions(int vector_class, int i, int j, int k,
 				// these are "used" expansions
 				if (expanded.dataPoint == hanselChainSet[hc][v].dataPoint && !hanselChainSet[hc][v].visited && &hanselChainSet[hc][v] != &hanselChainSet[i][j]) // comparing memory locations in last clause
 				{
-					if (vector_class)
+					// if newValue is greater than the oldValue, it means that it is an expansion in the positive direction, so the class should be 1.
+					if (newValue > oldValue)
 					{
 						hanselChainSet[i][j].expandable_one.push_back(&hanselChainSet[hc][v]);
 					}
+
+					// if newValue is less than the oldValue, it measn that the expansion is in the negative direction, so the class should be 0.
 					else
 					{
 						hanselChainSet[i][j].expandable_zero.push_back(&hanselChainSet[hc][v]);
@@ -1465,12 +1545,16 @@ void expertDataMining::possibleExpansions(int vector_class, int i, int j, int k,
 
 					return;
 				}
+
+				// this may be obsolete now
 				else if (expanded.dataPoint == hanselChainSet[hc][v].dataPoint && &hanselChainSet[hc][v] != &hanselChainSet[i][j]) // if oldVector is visited, then add to "unused" expansions
 				{
-					if (vector_class)
+					// if newValue is greater than the oldValue, it means that it is an expansion in the positive direction, so the class should be 1.
+					if (newValue > oldValue)
 					{
 						hanselChainSet[i][j].unexpandable_one.push_back(&hanselChainSet[hc][v]);
 					}
+					// if newVlua is less than the oldValue, it measn that the expansion is in the negative direction, so the class should be 0.
 					else
 					{
 						hanselChainSet[i][j].unexpandable_zero.push_back(&hanselChainSet[hc][v]);
@@ -1481,7 +1565,6 @@ void expertDataMining::possibleExpansions(int vector_class, int i, int j, int k,
 			}
 		}
 	}
-
 }
 
 
@@ -1497,6 +1580,46 @@ void expertDataMining::checkExpansions(int vector_class, int i, int j)
 				vector->expanded_by = &hanselChainSet[i][j];
 				vector->_class = vector_class;
 				vector->visited = true;
+
+				// add here for "reverse expansion"
+				/*if (function_kv > 2)
+				{
+					if (vector->_class < function_kv - 1)
+					{
+						// calculate the difference between then 
+						for (auto v : vector->expandable_zero)
+						{
+							// if reverse expansion is not the same as the datapoint that expanded the datapoint in question
+							// also, it' must be visited's class must be higher than the current datapoint's class
+							if (v != &hanselChainSet[i][j] && v->_class > vector->_class) 
+							{
+
+							}
+						}
+
+						// calculate the difference between the expanded datapoint and the source of expansion
+						// this also doesnt work
+						std::vector<int> search(dimension, 0);
+
+						for (int k = 0; k < dimension; k++)
+						{
+							if (vector->dataPoint[k] != hanselChainSet[i][j].dataPoint[k])
+							{
+								search[k] = vector->dataPoint[k]; // because this is positive expansion, we use the greater value, 
+								break;
+							}
+						}
+
+						// search for the specified datapoint
+						
+					}
+				}*/
+			}
+
+			// if vector class is greater than the current class even though the previous was already visited
+			else if (vector_class > vector->_class)
+			{
+
 			}
 		}
 	}
@@ -1510,6 +1633,11 @@ void expertDataMining::checkExpansions(int vector_class, int i, int j)
 				vector->expanded_by = &hanselChainSet[i][j];
 				vector->_class = vector_class;
 				vector->visited = true;
+
+				if (function_kv > 2)
+				{
+					// add here for "reverse expansion"
+				}
 			}
 		}
 	}
@@ -1556,11 +1684,13 @@ int expertDataMining::askingOfQuestion(int i, int j)
 	int vector_class = -1;
 	bool ask = true;
 
-	// check if the oldVector contains any attribute that must be true.
+	// check if the vector contains any attribute that must be true for the vector to be true
 	// if not, then that oldVector must have a class of 0
-	for (auto k : trueAttributes)
+	for (auto attribute : attributes)
 	{
-		if (-1 < k && k < dimension && !hanselChainSet[i][j].dataPoint[k])
+		int t = attribute.trueIndex;
+
+		if (-1 < t && t < dimension && hanselChainSet[i][j].dataPoint[t] != attribute.trueValue)
 		{
 			ask = false;
 			vector_class = 0;
@@ -1572,6 +1702,7 @@ int expertDataMining::askingOfQuestion(int i, int j)
 	{
 		orderOfAskingSummary.push_back(i);
 		orderOfAskingSummary.push_back(j);
+
 
 		std::cout << "\nEnter the class for this data point:\n";
 
@@ -1588,10 +1719,23 @@ int expertDataMining::askingOfQuestion(int i, int j)
 
 			// k-value here
 
-			std::cout << attributes[k] + "\t\t\t= " << hanselChainSet[i][j].dataPoint[k] << std::endl;
+			std::cout << attributes[k].name + "\t\t\t= " << hanselChainSet[i][j].dataPoint[k] << std::endl;
 		}
 
-		std::cout << "Enter Class: " << std::flush;
+		// if function kv is not binary, the current vector's class is not 0 or -1 (unassigned), and there is a possibility that the class could be greater (class is less than highest value)
+		if (function_kv > 2 && hanselChainSet[i][j]._class > 0 && hanselChainSet[i][j]._class < function_kv - 1)
+		{
+			// do something
+			std::cout << "\nThe current class of this datapoint can be between " << hanselChainSet[i][j]._class << " and " << function_kv - 1
+				<< ".\nIt was already expanded, but the class can be a higher value according to the given function k-value." << std::flush;
+
+			std::cout << "Enter Class (" << hanselChainSet[i][j]._class << " - " << function_kv - 1 << "): " << std::flush;
+		}
+		else
+		{
+			std::cout << "Enter Class (0 - " << function_kv - 1 << "): " << std::flush;
+		}
+
 		std::cin >> vector_class;
 		std::cin.clear();
 		std::cin.ignore(1000, '\n');
@@ -1633,7 +1777,6 @@ std::vector<int> expertDataMining::init()
 		std::cin.ignore(1000, '\n');
 
 		attributes.resize(dimension);
-		kv_attributes.resize(dimension);
 
 		// start sub-functions
 		std::cout << "Are there any nested attributes (sub-functions) for this dataset?"
@@ -1729,19 +1872,58 @@ std::vector<int> expertDataMining::init()
 		std::cin >> attributes[i];
 		std::cin.clear();
 		std::cin.ignore(1000, '\n');*/
-		attributes[i] = 'a' + i;
+		attributes[i].name = attributeSymbol + std::to_string(i + 1);
 	}
 
 	// ask for k-values for each attribute
 	// THIS SIMULATION ONLY WORKS FOR K-VALUES OF 2, CURRENTLY!!!
 	for (int i = 0; i < dimension; i++)
 	{
-		/*std::cout << "\nWhat is the k_value of attribute " + attributes[i] + "?";
-		std::cout << "\nEnter: " << std::flush;
-		std::cin >> kv_attributes[i];
-		std::cin.clear();
-		std::cin.ignore(1000, '\n');*/
-		kv_attributes[i] = 2;
+		if (askKV)
+		{
+			std::cout << "\nWhat is the k_value of attribute " + attributes[i].name + "?";
+			std::cout << "\nEnter: " << std::flush;
+
+			try
+			{
+				std::cin >> attributes[i].kv;
+
+				if (attributes[i].kv < 2)
+				{
+					attributes[i].kv = 2;
+				}
+
+				std::cin.clear();
+				std::cin.ignore(1000, '\n');
+			}
+			catch (std::exception& e) 
+			{
+				std::cerr << e.what() << std::endl;
+				attributes[i].kv = 2;
+			}
+		}
+		else
+		{
+			attributes[i].kv = 2;
+		}
+	}
+
+	// get function_kv if it wasnt already assigned by the constructor
+	if (function_kv == -1)
+	{
+		std::cout << "What is kn+1? It must be 2 or greater. Please enter: " << std::flush;
+		int c;
+		std::cin >> c;
+
+		if (c < 2)
+		{
+			std::cout << "By default, kn+1 will be 2." << std::endl;
+			function_kv = 2;
+		}
+		else
+		{
+			function_kv = c;
+		}
 	}
 
 	calculateHanselChains(dimension);
@@ -1767,6 +1949,21 @@ std::vector<int> expertDataMining::init()
 		std::cerr << "user input fail. " << e.what() << std::endl;
 	}
 
+	findTrueAttributes();
+
+	// determine if program should be chainJump or static
+	std::cout << "\nDo you want to use chain jumping (1/0)?";
+	std::cout << "\nEnter: " << std::flush;
+	std::cin >> chainJump;
+
+	calculateAllPossibleExpansions();
+
+	return genericParentOrChildList;
+}
+
+
+void expertDataMining::findTrueAttributes()
+{
 	// is there any attribute which must be true for answer to be true?
 	std::cout << "\nIs there any attribute which must be true for the datapoint to be true?"
 		<< "\nEnter the number assigned to each attribute or -1 if there is no such attribute."
@@ -1774,7 +1971,7 @@ std::vector<int> expertDataMining::init()
 
 	for (int i = 0; i < dimension; i++)
 	{
-		std::cout << attributes[i] + " - " + std::to_string(i) + "\n";
+		std::cout << attributes[i].name + " - " + std::to_string(i) + "\n";
 	}
 
 	std::cout << "Enter: " << std::flush;
@@ -1796,7 +1993,24 @@ std::vector<int> expertDataMining::init()
 	{
 		if (-1 < i && i < dimension)
 		{
-			trueAttributes.push_back(i);
+			attributes[i].trueIndex = i;
+
+			if (attributes[i].kv > 2)
+			{
+				std::cout << "The k-value of this attribute is: " << attributes[i].kv << std::endl;
+				std::cout << "For what value of k is this attribute true? Please enter: " << std::flush;
+				int c;
+				std::cin >> c;
+
+				if (-1 < i && i < dimension)
+				{
+					attributes[i].trueValue = c;
+				}
+				else
+				{
+					attributes[i].trueValue = 1;
+				}
+			}
 		}
 
 		temp.erase(0, pos + 1);
@@ -1809,16 +2023,6 @@ std::vector<int> expertDataMining::init()
 	}
 
 	f(std::stoi(temp));
-
-
-	// determine if program should be chainJump or static
-	std::cout << "\nDo you want to use chain jumping (1/0)?";
-	std::cout << "\nEnter: " << std::flush;
-	std::cin >> chainJump;
-
-	calculateAllPossibleExpansions();
-
-	return genericParentOrChildList;
 }
 
 
@@ -1833,21 +2037,28 @@ expertDataMining::expertDataMining(char attributeSymbol, std::string parent_attr
 	this->attributeSymbol = attributeSymbol;
 	this->parent_attribute = parent_attribute;
 	this->dimension = dimension;
-
 	attributes.resize(dimension);
-	kv_attributes.resize(dimension);
-	associated_attributes.resize(dimension);
+	childAttributes.resize(dimension);
 }
 
 
-expertDataMining::expertDataMining(char attributeSymbol, std::vector<std::vector<std::string>> associated_attributes) // used in top down approach, creating parent
+expertDataMining::expertDataMining(char attributeSymbol, std::string parent_attribute, int dimension, int function_kv) // used in top down approach after parent is constructed, create the children for that parent
 {
 	this->attributeSymbol = attributeSymbol;
-	this->associated_attributes = associated_attributes;
-	dimension = (int)associated_attributes.size();
-
+	this->parent_attribute = parent_attribute;
+	this->dimension = dimension;
+	this->function_kv = function_kv;
 	attributes.resize(dimension);
-	kv_attributes.resize(dimension);
+	childAttributes.resize(dimension);
+}
+
+
+expertDataMining::expertDataMining(char attributeSymbol, std::vector<std::vector<std::string>> childAttributes) // used in top down approach, creating parent
+{
+	this->attributeSymbol = attributeSymbol;
+	this->childAttributes = childAttributes;
+	dimension = (int)childAttributes.size();
+	attributes.resize(dimension);
 }
 
 
@@ -1993,18 +2204,21 @@ void expertDataMining::printToFile(std::fstream& results)
 
 	for (int i = 0; i < dimension; i++)
 	{
-		results << attributeSymbol << i + 1 << "," << kv_attributes[i] << ",";
+		results << attributeSymbol << i + 1 << "," << attributes[i].kv << ",";
 
-		if (!associated_attributes[i].empty())
+		if (!childAttributes.empty())
 		{
-			for (auto associateAttr : associated_attributes[i])
+			if (!childAttributes[i].empty())
 			{
-				results << associateAttr << ",";
+				for (auto associateAttr : childAttributes[i])
+				{
+					results << associateAttr << ",";
+				}
 			}
-		}
-		else
-		{
-			results << "None";
+			else
+			{
+				results << "None";
+			}
 		}
 
 		results << "\n";
@@ -2039,17 +2253,17 @@ void expertDataMining::printToFile(std::fstream& results)
 	}
 
 	// true attributes
-	if (trueAttributes.size() > 0)
+	results << "True Attributes:,";
+
+	for (auto attribute : attributes)
 	{
-		results << "True Attributes:,";
-
-		for (int i = 0; i < (int)trueAttributes.size() - 1; i++)
+		if (attribute.trueIndex != -1)
 		{
-			results << attributeSymbol << trueAttributes[i] + 1 << ",";
+			results << attributeSymbol << attribute.trueIndex + 1 << "=" << attribute.trueValue << ", ";
 		}
-
-		results << attributeSymbol << trueAttributes[trueAttributes.size() - 1] + 1 << "\n";
 	}
+
+	results << "\n";
 
 	// majority flag
 	if (usedMajorityFlag)
@@ -2079,7 +2293,6 @@ void expertDataMining::printToFile(std::fstream& results)
 	{
 		results << "Static\n\n";
 	}
-
 
 	// print original results
 	results << "Original Results\n";
@@ -2132,6 +2345,7 @@ void expertDataMining::printToFile(std::fstream& results)
 }
 
 
+// assume a "<=" relationship when using k-value. for example k = 3. attribute is 1, but user said that the datapoint was true, so then if attrbute is 2, it is also true
 std::pair<std::vector<std::vector<int>>, std::vector<std::vector<int>>> expertDataMining::restoreFunction()
 {
 	// restore monotone Boolean function
@@ -2146,7 +2360,7 @@ std::pair<std::vector<std::vector<int>>, std::vector<std::vector<int>>> expertDa
 		for (j = 0; j < (int)hanselChainSet[i].size(); j++)
 		{
 			// first vector of class 1 is "lower one" vector
-			if (hanselChainSet[i][j]._class)
+			if (hanselChainSet[i][j]._class == function_kv - 1) // must be equal to highest function_kv to be "low unit"
 			{
 				bool first = false;
 
@@ -2156,20 +2370,20 @@ std::pair<std::vector<std::vector<int>>, std::vector<std::vector<int>>> expertDa
 				// that element is in a clause in the monotone boolean funciton
 				for (int k = 0; k < dimension; k++)
 				{
-					if (hanselChainSet[i][j].dataPoint[k] == 1)
+					if (hanselChainSet[i][j].dataPoint[k] > 0) // used to be " == 1"
 					{
 						all_zero = false;
 
 						if (!first)
 						{
 							std::vector<int> temp(dimension);
-							temp[k] = 1;
+							temp[k] = hanselChainSet[i][j].dataPoint[k]; // used to be " = 1"
 							boolFunc.push_back(temp);
 							first = true;
 						}
 						else
 						{
-							boolFunc[boolFunc.size() - 1][k] = 1;
+							boolFunc[boolFunc.size() - 1][k] = hanselChainSet[i][j].dataPoint[k];
 						}
 					}
 				}
@@ -2269,15 +2483,20 @@ std::pair<std::string, std::string> expertDataMining::functionToString(std::pair
 			{
 				if (boolFunc[i][j])
 				{
-					// FIX:: change to just use attr symbol
-					//if (parent_attribute == "")
-					//{
-						temp += attributeSymbol + std::to_string(j + 1 - dimension);
-					//}
-					//else
-					//{
-					//	temp += parent_attribute + "." + std::to_string(j + 1 - dimension);
-					//}
+					if (attributes[j].kv > 2)
+					{
+						temp += "(";
+						temp += attributeSymbol;
+						temp += std::to_string(j + 1 - dimension); // just change to boolFunc[i][j] for k-value?
+						temp += ">=";
+						temp += std::to_string(boolFunc[i][j]);
+						temp += ")";
+					}
+					else
+					{
+						temp += attributeSymbol;
+						temp += std::to_string(boolFunc[i][j]);
+					}
 				}
 			}
 		}
@@ -2291,14 +2510,20 @@ std::pair<std::string, std::string> expertDataMining::functionToString(std::pair
 		{
 			if (boolFunc[i][j])
 			{
-				//if (parent_attribute == "")
-				//{
-					temp += attributeSymbol + std::to_string(j + 1);
-				//}
-				//else
-				//{
-					//temp += parent_attribute + "." + std::to_string(j + 1);
-				//}
+				if (attributes[j].kv > 2)
+				{
+					temp += "(";
+					temp += attributeSymbol;
+					temp += std::to_string(j + 1);
+					temp += ">="; 
+					temp += std::to_string(boolFunc[i][j]);
+					temp += ")";
+				}
+				else
+				{
+					temp += attributeSymbol;
+					temp += std::to_string(boolFunc[i][j]);
+				}
 			}
 		}
 
@@ -2328,14 +2553,20 @@ std::pair<std::string, std::string> expertDataMining::functionToString(std::pair
 		{
 			if (boolFunc[i][j])
 			{
-				//if (parent_attribute == "")
-				//{
-					temp += attributeSymbol + std::to_string(j + 1);
-				//}
-				//else
-				//{
-					//temp += parent_attribute + "." + std::to_string(j + 1);
-				//}
+				if (attributes[j].kv > 2)
+				{
+					temp += "(";
+					temp += attributeSymbol;
+					temp += std::to_string(j + 1);
+					temp += ">=";
+					temp += std::to_string(boolFunc[i][j]);
+					temp += ")";
+				}
+				else
+				{
+					temp += attributeSymbol;
+					temp += std::to_string(boolFunc[i][j]);
+				}
 			}
 		}
 
