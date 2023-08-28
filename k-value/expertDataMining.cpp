@@ -430,7 +430,7 @@ bool expertDataMining::questionFunc(int i, int j, int& vector_class)
 
 	// if vector has not been visited, then ask user class
 	// else, retrieve class
-	if (!hanselChainSet[i][j].visited || (hanselChainSet[i][j]._class > -1 && hanselChainSet[i][j]._class < function_kv - 1)) // or class is not unassigned and class is less than possible k-value
+	if (!hanselChainSet[i][j].visited || (hanselChainSet[i][j]._class && hanselChainSet[i][j]._class < function_kv - 1)) // or class is not 0 and class is less than possible k-value
 	{
 		vector_class = askingOfQuestion(i, j);
 	}
@@ -1722,8 +1722,8 @@ int expertDataMining::askingOfQuestion(int i, int j)
 			std::cout << attributes[k].name + "\t\t\t= " << hanselChainSet[i][j].dataPoint[k] << std::endl;
 		}
 
-		// if function kv is not binary, the current vector's class is not -1 (unassigned), and there is a possibility that the class could be greater (class is less than highest value)
-		if (function_kv > 2) // this used to be here, but its also in questionFunc(): && hanselChainSet[i][j]._class > -1 && hanselChainSet[i][j]._class < function_kv - 1
+		// if function kv is not binary, the current vector's class is not 0 or -1 (unassigned), and there is a possibility that the class could be greater (class is less than highest value)
+		if (function_kv > 2 && hanselChainSet[i][j]._class > 0 && hanselChainSet[i][j]._class < function_kv - 1)
 		{
 			// do something
 			if (!hanselChainSet[i][j].lessThan)
@@ -2751,25 +2751,25 @@ void expertDataMining::printTable(std::fstream& results, std::vector<int> target
 				finalQueryOrder += std::to_string(hanselChainSet[i][j].finalQueryOrder);
 			}
 
-			// expanded up expansions
+			// expanded one expansions
 			for (auto element : hanselChainSet[i][j].up_expansions)
 			{
 				expandedOneStr += std::to_string(element->number.first) + "." + std::to_string(element->number.second) + ";";
 			}
 
-			// expanded down expansions
+			// expanded zero expansions
 			for (auto element : hanselChainSet[i][j].down_expansions)
 			{
 				expandedZeroStr += std::to_string(element->number.first) + "." + std::to_string(element->number.second) + ";";
 			}
 
-			// expandable up expansions
+			// expandable one expansions
 			for (auto element : hanselChainSet[i][j].up_expandable)
 			{
 				expandableOneStr += std::to_string(element->number.first) + "." + std::to_string(element->number.second) + ";";
 			}
 
-			// expandable down expansions
+			// expandable zero expansions
 			for (auto element : hanselChainSet[i][j].down_expandable)
 			{
 				expandableZeroStr += std::to_string(element->number.first) + "." + std::to_string(element->number.second) + ";";
