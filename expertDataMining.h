@@ -29,8 +29,14 @@ public:
 		/// @brief the class or value of the dataPoint
 		int _class = -1;
 
+		/// @brief confirmed answer through either answering the question, Boolean expansion, or double-expansion (terminology for this is tentative)
+		bool confirmed = false;
+
 		/// @brief by default the class is great than or equal to. However, if this flag is true, then the class is less than or equal to.
 		bool lessThan = false;
+
+		/// @brief by default the class is weak (0 and asked/down-expanded or 1 and asked/up-expanded)
+		bool weak = true; 
 
 		/// @brief the index of this vector's Hansel Chain and the index of the vector in the Hansel Chain, respectively
 		std::pair<int, int> number;
@@ -48,7 +54,6 @@ public:
 		std::vector<dvector*> up_expandable;
 
 		// unexpandable is probably obsolete now
-
 		/// @brief zero-to-zero expansions that are impossible because the given class was not zero
 		//std::vector<dvector*> unexpandable_zero;
 
@@ -85,8 +90,8 @@ public:
 	{
 		std::string name = "";
 		int kv = 2;
-		int trueValue = -1;
-		int trueIndex = -1;
+		int trueValue = -1; // "greater than or equal to"
+		int trueIndex = -1; // index location for value
 	};
 
 
@@ -231,6 +236,10 @@ public:
 	void chainJumpOrderQuestionsFunc();
 
 
+	/// @brief binary search methodology for questions. binary search is intra-chain
+	void binarySearch(int i, int l, int r);
+
+
 	/// @brief order the Hansel Chains manually by a given sequence of numbers
 	void manualHanselChainOrder();
 
@@ -247,7 +256,23 @@ public:
 	void possibleExpansions(int newValue, int i, int j, int p, int startChain);
 
 
-	/// @brief checks the possible expansions for a given vector (i, j), and expands those vectors if possible.
+	/// @brief check up Expansions
+	/// @param i 
+	/// @param j 
+	/// @param vector_class 
+	/// @return true when recursion should be used. false otherwise
+	bool checkUp(int i, int j, int vector_class);
+
+
+	/// @brief check down expansions. 
+	/// @param i 
+	/// @param j 
+	/// @param vector_class 
+	/// @return true if recursion should be used. false otherwise
+	bool checkDown(int i, int j, int vector_class);
+
+
+	/// @brief checks the possible expansions for a given vector (i, j), and expands those vectors if possible. recurses breadthwise to get all possible expansions
 	/// @param vector_class 
 	/// @param i the Hansel Chain
 	/// @param j a vector in the Hansel Chain

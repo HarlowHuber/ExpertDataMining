@@ -10,6 +10,7 @@ std::vector<std::vector<expertDataMining::dvector>> expertDataMining::genChains(
 	{
 		for (int k = 0; k < chains.at(j).size(); k++)
 		{
+
 			for (int l = 0; l < chains.at(j)[k].size(); l++)
 			{
 				std::vector<int> b(vector_dimension);
@@ -17,8 +18,10 @@ std::vector<std::vector<expertDataMining::dvector>> expertDataMining::genChains(
 
 				for (int i = 1; i < vector_dimension; i++)
 				{
-					b[i] = chains.at(j)[k][l].dataPoint[i - 1]; // used to be for std::oldVector: b[i] = chains.at(j)[k][l][i - 1];
+					b[i] = chains.at(j)[k][l].dataPoint[i - 1]; // used to be for std::vector: b[i] = chains.at(j)[k][l][i - 1];
 				}
+
+				//std::reverse(b.begin(), b.end()); // its ugly, but i couldnt figure out how to do this in the immediete above code in the 10 min i tried. not as simple as it looks?
 
 				//b.setLevel();
 				dvector c;
@@ -28,8 +31,8 @@ std::vector<std::vector<expertDataMining::dvector>> expertDataMining::genChains(
 		}
 	}
 
-	// move the largest of each sub std::oldVector to corresponding sub std::oldVector in the first key
-	// then move the largest of each subsequent sub std::oldVector to the second key's sub std::oldVector
+	// move the largest of each sub std::vector to corresponding sub std::vector in the first key
+	// then move the largest of each subsequent sub std::vector to the second key's sub std::vector
 	// repeat until chain.at(num-2) is reached since the last key will have nothing moved to it
 	// j = current key being added to
 	// emptV = number of empty std::vectors
@@ -47,7 +50,7 @@ std::vector<std::vector<expertDataMining::dvector>> expertDataMining::genChains(
 					break;
 				}
 
-				/// USE FIND AND END because kth std::oldVector doesn't exist for 3d 3val, k=2
+				/// USE FIND AND END because kth std::vector doesn't exist for 3d 3val, k=2
 				if (k > chains.at(count + 1).size() - 1)
 				{
 					break;
@@ -115,7 +118,7 @@ void expertDataMining::calculateHanselChains(int vector_dimension)
 				baseChain.push_back(c);
 			}
 
-			//create a std::oldVector of std::vectors to hold the baseChain
+			//create a std::vector of std::vectors to hold the baseChain
 			hanselChainSet.push_back(baseChain);
 		}
 		else
@@ -408,38 +411,6 @@ void expertDataMining::findMajorityVectors()
 			}
 		}
 	}
-}
-
-
-bool expertDataMining::questionFunc(int i, int j, int& vector_class)
-{
-	// updated order must go before actual question because its tracking the intention of the question, not whether it was asked.
-	if (!hanselChainSet[i][j].majorityFlag || !usedMajorityFlag || !hanselChainSet[i][j].visited || !hanselChainSet[i][j].updatedQueryOrder) // used, not useMajority flag because otherwise may expand twice.
-	{
-		hanselChainSet[i][j].updatedQueryOrder = questionOrder;
-		questionOrder++;
-	}
-
-	// skip if vector is majority flag and usedMajorityFlag, was visited, and updatedQuery Order > 0 
-	// (if updated query order is 0, then visited (expanded), but not asked, so retrieve class and do immediete expansions)
-	// Otherwise, question may be asked.
-	else
-	{
-		return true;
-	}
-
-	// if vector has not been visited, then ask user class
-	// else, retrieve class
-	if (!hanselChainSet[i][j].visited || (hanselChainSet[i][j]._class > -1 && hanselChainSet[i][j]._class < function_kv - 1)) // or class is not unassigned and class is less than possible k-value
-	{
-		vector_class = askingOfQuestion(i, j);
-	}
-	else
-	{
-		vector_class = hanselChainSet[i][j]._class;
-	}
-
-	return false;
 }
 
 
@@ -1293,12 +1264,95 @@ void expertDataMining::changeAttributesOfRealData(std::vector<std::vector<int>> 
 }
 
 
+void expertDataMining::binarySearch(int i, int l, int r)
+{
+	while (l <= r)
+	{
+		int j = l + (r - l) / 2; // this is middle
+		int vector_class = -1;
+
+		if (questionFunc(i, j, vector_class))
+		{
+			continue;
+		}
+
+		checkExpansions(vector_class, i, j);
+
+		// dual expansions
+		// if j and l or j and r equal the same class, then binary search expansion
+		if (hanselChainSet[i][j]._class == hanselChainSet[i][l]._class)
+		{
+			dualExpansion(i, j, l);
+		}
+		else if (hanselChainSet[i][j]._class == hanselChainSet[i][r]._class)
+		{
+			dualExpansion(i, j, r);
+		}
+
+		if (vector_class == function_kv - 1)
+		{
+			// go to start of chain
+			binarySearch(i, l, j - 1);
+		}
+		else if (vector_class == 0)
+		{
+			// go to end of chain
+			binarySearch(i, j + 1, r);
+		}
+		else
+		{
+			// go to left and right if function_kv > 2
+			binarySearch(i, l, j - 1);
+			binarySearch(i, j + 1, r);
+		}
+	}
+}
+
+
+// implement binary search here
+// need to auto-expand vectors within the binary search
 void expertDataMining::staticOrderQuestionsFunc()
 {
 	for (int i = 0; i < numChains; i++)
 	{
+		// start binary search
 		int chainSize = (int)hanselChainSet[i].size();
+		int l = 0;
+		int r = chainSize - 1;
+		int start = l + (r - l) / 2;
+		
+		binarySearch(i, l, r);
 
+		// Boolean only
+		// check if the skipped l or r side has anything that wasnt expanded
+		// make checkExpansions recursive would solve issues maybe?
+		if (function_kv == 2)
+		{
+			if (hanselChainSet[i][start]._class >= 1)
+			{
+				for (int j = start + 1; j < chainSize; j++)
+				{
+					if (!hanselChainSet[i][j - 1].visited)
+					{
+						checkExpansions(hanselChainSet[i][j - 1]._class, i, j);
+					}
+				}
+			}
+			else
+			{
+				for (int j = start - 1; j >= 0; j--)
+				{
+					if (!hanselChainSet[i][j + 1].visited)
+					{
+						checkExpansions(hanselChainSet[i][j + 1]._class, i, j);
+					}
+				}
+			}
+		}
+
+
+		/*
+		// non-binary method
 		for (int j = 0; j < chainSize; j++)
 		{
 			int vector_class = -1;
@@ -1309,7 +1363,7 @@ void expertDataMining::staticOrderQuestionsFunc()
 			}
 
 			checkExpansions(vector_class, i, j);
-		}
+		}*/
 	}
 }
 
@@ -1568,78 +1622,120 @@ void expertDataMining::possibleExpansions(int newValue, int i, int j, int p, int
 }
 
 
+bool expertDataMining::checkUp(int i, int j, int vector_class)
+{
+	//bool recurse = false;
+
+	for (auto vector : hanselChainSet[i][j].up_expandable)
+	{
+		if (!vector->visited)
+		{
+			hanselChainSet[i][j].up_expansions.push_back(vector);
+			vector->expanded_by = &hanselChainSet[i][j];
+			vector->_class = vector_class;
+			vector->visited = true;
+			//recurse = true;
+		}
+
+		// if vector class is greater than the current class even though the previous was already visited
+		// the vector class must be "greater than or equal" to in this case
+		else if (vector_class > vector->_class && !vector->lessThan)
+		{
+			// delete the pointer to this vector in the vector that expanded this one
+			std::erase(vector->expanded_by->up_expansions, vector);
+
+			// reassign expanded by
+			// don't need to mark as visited
+			vector->expanded_by = &hanselChainSet[i][j];
+			vector->_class = vector_class;
+			//recurse = true;
+		}
+
+		// the vector is a strong value if it is maximum function kv and was up expanded
+		if (vector->_class == function_kv - 1)
+		{
+			vector->weak = false;
+			vector->confirmed = true; // always confirmed when Boolean
+		}
+
+		// double-expansion 
+		// is able to confirm an expansion if it succeeds
+		/*if (!vector->confirmed)
+		{
+			if (hanselChainSet[vector->number.first - 1].size() > vector->number.second // subsequent vector exists
+				&& vector->number.second - 2 >= 0) // previous vector exists
+			{
+				int previous = hanselChainSet[vector->number.first - 1][vector->number.second - 2]._class;
+				int subsequent = hanselChainSet[vector->number.first - 1][vector->number.second]._class;
+
+				if (previous == vector->_class && vector->_class == subsequent)
+				{
+					vector->confirmed = true;
+				}
+			}
+		}*/
+		checkUp(vector)
+	}
+
+	return recurse;
+}
+
+
+bool expertDataMining::checkDown(int i, int j, int vector_class)
+{
+	for (auto vector : hanselChainSet[i][j].down_expandable)
+	{
+		if (!vector->visited)
+		{
+			hanselChainSet[i][j].down_expansions.push_back(vector);
+			vector->expanded_by = &hanselChainSet[i][j];
+			vector->_class = vector_class;
+			vector->visited = true;
+			vector->lessThan = true; // mark as "less than or equal to" for the vector class
+		}
+
+		// if vector class is less than the current class even though the previous was already visited
+		// the vector class must be "less than or equal to", in this case.
+		else if (vector_class < vector->_class && vector->lessThan)
+		{
+			// delete the pointer to this vector in the vector that expanded this one
+			std::erase(vector->expanded_by->down_expansions, vector);
+
+			// reassign expanded by
+			// don't need to mark as visited
+			vector->expanded_by = &hanselChainSet[i][j];
+			vector->_class = vector_class;
+		}
+
+		// the vector is a strong value if is 0 and was down expanded
+		if (vector->_class == 0)
+		{
+			vector->weak = false;
+		}
+	}
+}
+
+
 void expertDataMining::checkExpansions(int vector_class, int i, int j)
 {
-	auto checkUp = [this, i, j, vector_class]()
-	{
-		for (auto vector : hanselChainSet[i][j].up_expandable)
-		{
-			if (!vector->visited)
-			{
-				hanselChainSet[i][j].up_expansions.push_back(vector);
-				vector->expanded_by = &hanselChainSet[i][j];
-				vector->_class = vector_class;
-				vector->visited = true;
-			}
-
-			// if vector class is greater than the current class even though the previous was already visited
-			// the vector class must be "greater than or equal" to in this case
-			else if (vector_class > vector->_class && !vector->lessThan)
-			{
-				// delete the pointer to this vector in the vector that expanded this one
-				std::erase(vector->expanded_by->up_expansions, vector);
-
-				// reassign expanded by
-				// don't need to mark as visited
-				vector->expanded_by = &hanselChainSet[i][j];
-				vector->_class = vector_class;
-			}
-		}
-	};
-
-	auto checkDown = [this, i, j, vector_class]()
-	{
-		for (auto vector : hanselChainSet[i][j].down_expandable)
-		{
-			if (!vector->visited)
-			{
-				hanselChainSet[i][j].down_expansions.push_back(vector);
-				vector->expanded_by = &hanselChainSet[i][j];
-				vector->_class = vector_class;
-				vector->visited = true;
-				vector->lessThan = true; // mark as "less than or equal to" for the vector class
-			}
-
-			// if vector class is less than the current class even though the previous was already visited
-			// the vector class must be "less than or equal to", in this case.
-			else if (vector_class < vector->_class && vector->lessThan)
-			{
-				// delete the pointer to this vector in the vector that expanded this one
-				std::erase(vector->expanded_by->down_expansions, vector);
-
-				// reassign expanded by
-				// don't need to mark as visited
-				vector->expanded_by = &hanselChainSet[i][j];
-				vector->_class = vector_class;
-			}
-		}
-	};
-
 	if (function_kv == 2)
 	{
+		bool recurse;
+
 		if (vector_class)
 		{
-			checkUp();
+			recurse = checkUp(i, j, vector_class);
 		}
 		else
 		{
-			checkDown();
+			recurse = checkDown(i, j, vector_class);
 		}
 	}
 	else if (function_kv > 2)
 	{
-		checkUp();
-		checkDown();
+		bool recurse1, recurse2;
+		recurse1 = checkUp();
+		recurse2;  checkDown();
 	}
 }
 
@@ -1679,6 +1775,41 @@ void expertDataMining::fixExpansions(int vector_class, int i, int j)
 }
 
 
+bool expertDataMining::questionFunc(int i, int j, int& vector_class)
+{
+	// updated order must go before actual question because its tracking the intention of the question, not whether it was asked.
+	if (!hanselChainSet[i][j].majorityFlag || !usedMajorityFlag || !hanselChainSet[i][j].visited || !hanselChainSet[i][j].updatedQueryOrder) // used, not useMajority flag because otherwise may expand twice.
+	{
+		hanselChainSet[i][j].updatedQueryOrder = questionOrder;
+		questionOrder++;
+	}
+
+	// skip if vector is majority flag and usedMajorityFlag, was visited, and updatedQuery Order > 0 
+	// (if updated query order is 0, then visited (expanded), but not asked, so retrieve class and do immediete expansions)
+	// Otherwise, question may be asked.
+	else
+	{
+		return true;
+	}
+
+	// if vector has not been visited, then ask user class
+	// else, retrieve class
+	//if (!hanselChainSet[i][j].visited || hanselChainSet[i][j].weak) // or class is a weak value
+	if (!hanselChainSet[i][j].confirmed)
+	{
+		// used to be in the if statement above
+		// || (hanselChainSet[i][j]._class > -1 && hanselChainSet[i][j]._class < function_kv - 1)
+		vector_class = askingOfQuestion(i, j);
+	}
+	else
+	{
+		vector_class = hanselChainSet[i][j]._class;
+	}
+
+	return false;
+}
+
+
 int expertDataMining::askingOfQuestion(int i, int j)
 {
 	int vector_class = -1;
@@ -1690,7 +1821,7 @@ int expertDataMining::askingOfQuestion(int i, int j)
 	{
 		int t = attribute.trueIndex;
 
-		if (-1 < t && t < dimension && hanselChainSet[i][j].dataPoint[t] != attribute.trueValue)
+		if (-1 < t && t < dimension && hanselChainSet[i][j].dataPoint[t] < attribute.trueValue)
 		{
 			ask = false;
 			vector_class = 0;
@@ -1749,11 +1880,17 @@ int expertDataMining::askingOfQuestion(int i, int j)
 		std::cin.ignore(1000, '\n');
 		questionsAsked++;
 		hanselChainSet[i][j].asked = true;
+		hanselChainSet[i][j].confirmed = true;
 		hanselChainSet[i][j].finalQueryOrder = questionsAsked;
 	}
 
 	hanselChainSet[i][j]._class = vector_class;
 	hanselChainSet[i][j].visited = true;
+
+	if (hanselChainSet[i][j]._class == 0 || hanselChainSet[i][j]._class == function_kv - 1)
+	{
+		hanselChainSet[i][j].weak = false;
+	}
 
 	return vector_class;
 }
@@ -2311,9 +2448,9 @@ void expertDataMining::printToFile(std::fstream& results)
 	std::vector<std::string> tokens;
 	std::vector<int> targets;
 
-	std::cout << "Restore function for all values of kn+1? Please Enter (1/0): " << std::flush;
-	int r;
-	std::cin >> r;
+	//std::cout << "Restore function for all values of kn+1? Please Enter (1/0): " << std::flush;
+	int r = 1;
+	//std::cin >> r;
 
 	if (r)
 	{
@@ -2377,8 +2514,19 @@ void expertDataMining::printToFile(std::fstream& results)
 
 	for (auto target : targets)
 	{
-		boolFunc = restoreFunction(target);
-		auto str = functionToString(boolFunc, "<=");
+		std::pair<std::string, std::string> str;
+
+		if (target == 0)
+		{
+			boolFunc = restoreFunction(target + 1);
+			str = functionToString(boolFunc, "<");
+		}
+		else
+		{
+			boolFunc = restoreFunction(target);
+			str = functionToString(boolFunc, ">=");
+		}
+
 		boolFuncs.push_back(str.second);
 		boolFuncsSimplified.push_back(str.first);
 	}
@@ -2406,7 +2554,6 @@ void expertDataMining::printToFile(std::fstream& results)
 			applyBoolFuncToRealData(boolFunc.first, dataset);
 		}
 	}
-
 
 	printTable(results, targets, boolFuncsSimplified, boolFuncs, true);
 
@@ -2573,7 +2720,7 @@ std::pair<std::string, std::string> expertDataMining::functionToString(std::pair
 					else
 					{
 						temp += attributeSymbol;
-						temp += std::to_string(boolFunc[i][j]);
+						temp += std::to_string(j + 1);
 					}
 				}
 			}
@@ -2600,7 +2747,7 @@ std::pair<std::string, std::string> expertDataMining::functionToString(std::pair
 				else
 				{
 					temp += attributeSymbol;
-					temp += std::to_string(boolFunc[i][j]);
+					temp += std::to_string(j + 1);
 				}
 			}
 		}
@@ -2642,8 +2789,14 @@ std::pair<std::string, std::string> expertDataMining::functionToString(std::pair
 				}
 				else
 				{
+					// if sign is "less than" and attribute is boolean, then use a "NOT" symbol in the function
+					if (sign == "<")
+					{
+						temp += "!";
+					}
+
 					temp += attributeSymbol;
-					temp += std::to_string(boolFunc[i][j]);
+					temp += std::to_string(j + 1);
 				}
 			}
 		}
