@@ -18,6 +18,7 @@ std::vector<std::vector<expertDataMining::dvector>> expertDataMining::genChains(
 
 				for (int i = 1; i < vector_dimension; i++)
 				{
+					// FIX
 					b[i] = chains.at(j)[k][l].dataPoint[i - 1]; // used to be for std::vector: b[i] = chains.at(j)[k][l][i - 1];
 				}
 
@@ -1276,17 +1277,19 @@ void expertDataMining::binarySearch(int i, int l, int r)
 			continue;
 		}
 
+		//chainExpansions(i, j, vector_class);
+
+		// should expand everything
 		checkExpansions(vector_class, i, j);
 
 		// dual expansions
-		// if j and l or j and r equal the same class, then binary search expansion
-		if (hanselChainSet[i][j]._class == hanselChainSet[i][l]._class)
+		dualExpansion(i, l, j);
+		dualExpansion(i, j, r);
+
+		// update chainsFinished
+		for (int k = 0; k < hanselChainSet[i].size(); k++)
 		{
-			dualExpansion(i, j, l);
-		}
-		else if (hanselChainSet[i][j]._class == hanselChainSet[i][r]._class)
-		{
-			dualExpansion(i, j, r);
+
 		}
 
 		if (vector_class == function_kv - 1)
@@ -1326,7 +1329,7 @@ void expertDataMining::staticOrderQuestionsFunc()
 		// Boolean only
 		// check if the skipped l or r side has anything that wasnt expanded
 		// make checkExpansions recursive would solve issues maybe?
-		if (function_kv == 2)
+		/*if (function_kv == 2)
 		{
 			if (hanselChainSet[i][start]._class >= 1)
 			{
@@ -1348,7 +1351,7 @@ void expertDataMining::staticOrderQuestionsFunc()
 					}
 				}
 			}
-		}
+		}*/
 
 
 		/*
@@ -1527,21 +1530,6 @@ void expertDataMining::manualHanselChainOrder()
 }
 
 
-/*void expertDataMining::anyVectorOrder()
-{
-	std::fstream table;
-	table.open("table.csv", std::ios::out | std::ios::app);
-
-	// write vectors to file
-
-	table.close();
-	LPCWSTR str = L"excel.exe table.csv";
-	ShellExecute(NULL, L"open", str, NULL, NULL, SW_SHOWNORMAL);
-
-	// read vectors from file
-}*/
-
-
 void expertDataMining::calculateAllPossibleExpansions()
 {
 	for (int i = 0; i < (int)hanselChainSet.size(); i++)
@@ -1622,120 +1610,275 @@ void expertDataMining::possibleExpansions(int newValue, int i, int j, int p, int
 }
 
 
-bool expertDataMining::checkUp(int i, int j, int vector_class)
+/*void expertDataMining::chainExpansions(int i, int j, int vector_class)
 {
-	//bool recurse = false;
-
-	for (auto vector : hanselChainSet[i][j].up_expandable)
+	if (function_kv = 2)
 	{
-		if (!vector->visited)
+		// expand up
+		if (vector_class)
 		{
-			hanselChainSet[i][j].up_expansions.push_back(vector);
-			vector->expanded_by = &hanselChainSet[i][j];
-			vector->_class = vector_class;
-			vector->visited = true;
-			//recurse = true;
-		}
-
-		// if vector class is greater than the current class even though the previous was already visited
-		// the vector class must be "greater than or equal" to in this case
-		else if (vector_class > vector->_class && !vector->lessThan)
-		{
-			// delete the pointer to this vector in the vector that expanded this one
-			std::erase(vector->expanded_by->up_expansions, vector);
-
-			// reassign expanded by
-			// don't need to mark as visited
-			vector->expanded_by = &hanselChainSet[i][j];
-			vector->_class = vector_class;
-			//recurse = true;
-		}
-
-		// the vector is a strong value if it is maximum function kv and was up expanded
-		if (vector->_class == function_kv - 1)
-		{
-			vector->weak = false;
-			vector->confirmed = true; // always confirmed when Boolean
-		}
-
-		// double-expansion 
-		// is able to confirm an expansion if it succeeds
-		/*if (!vector->confirmed)
-		{
-			if (hanselChainSet[vector->number.first - 1].size() > vector->number.second // subsequent vector exists
-				&& vector->number.second - 2 >= 0) // previous vector exists
+			for (int k = j + 1; k < (int)hanselChainSet[i].size(); k++)
 			{
-				int previous = hanselChainSet[vector->number.first - 1][vector->number.second - 2]._class;
-				int subsequent = hanselChainSet[vector->number.first - 1][vector->number.second]._class;
-
-				if (previous == vector->_class && vector->_class == subsequent)
-				{
-					vector->confirmed = true;
-				}
+				expandUp(i, k - 1, &hanselChainSet[i][k], vector_class);
 			}
-		}*/
-		checkUp(vector)
+		}
+		// expand down
+		else
+		{
+			for (int k = j - 1; k >= 0; k--)
+			{
+				expandDown(i, k + 1, &hanselChainSet[i][k], vector_class);
+			}
+		}
 	}
-
-	return recurse;
-}
-
-
-bool expertDataMining::checkDown(int i, int j, int vector_class)
-{
-	for (auto vector : hanselChainSet[i][j].down_expandable)
+	// expand in both directions
+	else
 	{
-		if (!vector->visited)
+		for (int k = j + 1; k < (int)hanselChainSet[i].size(); k++)
 		{
-			hanselChainSet[i][j].down_expansions.push_back(vector);
-			vector->expanded_by = &hanselChainSet[i][j];
-			vector->_class = vector_class;
-			vector->visited = true;
-			vector->lessThan = true; // mark as "less than or equal to" for the vector class
+			expandUp(i, k - 1, &hanselChainSet[i][k], vector_class);
 		}
-
-		// if vector class is less than the current class even though the previous was already visited
-		// the vector class must be "less than or equal to", in this case.
-		else if (vector_class < vector->_class && vector->lessThan)
+		
+		for (int k = j - 1; k >= 0; k--)
 		{
-			// delete the pointer to this vector in the vector that expanded this one
-			std::erase(vector->expanded_by->down_expansions, vector);
-
-			// reassign expanded by
-			// don't need to mark as visited
-			vector->expanded_by = &hanselChainSet[i][j];
-			vector->_class = vector_class;
-		}
-
-		// the vector is a strong value if is 0 and was down expanded
-		if (vector->_class == 0)
-		{
-			vector->weak = false;
+			expandDown(i, k + 1, &hanselChainSet[i][k], vector_class);
 		}
 	}
-}
+}*/
 
 
 void expertDataMining::checkExpansions(int vector_class, int i, int j)
 {
+	// use dynamic programming solution to not keep checking stuff
+	std::map<int, std::vector<int>>* visited_map = new std::map<int, std::vector<int>>;
+
 	if (function_kv == 2)
 	{
-		bool recurse;
-
 		if (vector_class)
 		{
-			recurse = checkUp(i, j, vector_class);
+			checkUp(i, j, vector_class, visited_map);
 		}
 		else
 		{
-			recurse = checkDown(i, j, vector_class);
+			checkDown(i, j, vector_class, visited_map);
 		}
 	}
 	else if (function_kv > 2)
 	{
-		bool recurse1, recurse2;
-		recurse1 = checkUp();
-		recurse2;  checkDown();
+		checkUp(i, j, vector_class, visited_map);
+		checkDown(i, j, vector_class, visited_map);
+	}
+
+	// now go through and find any dual expansions
+	for (int k = 0; k < numChains; k++)
+	{
+		if (numConfirmedInChains[k] != (int)hanselChainSet[k].size())
+		{
+			findDualExpansion(k);
+		}
+	}
+
+	delete visited_map;
+}
+
+
+void expertDataMining::expandUp(int i, int j, dvector* vector, int vector_class)
+{
+	if (!vector->visited)
+	{
+		hanselChainSet[i][j].up_expansions.push_back(vector);
+		vector->expanded_by = &hanselChainSet[i][j];
+		vector->_class = vector_class;
+		vector->visited = true;
+	}
+
+	// if vector class is greater than the current class even though the previous was already visited
+	// the vector class must be "greater than or equal" to in this case
+	else if (vector_class > vector->_class && !vector->lessThan && !vector->asked)
+	{
+		// delete the pointer to this vector in the vector that expanded this one
+		std::erase(vector->expanded_by->up_expansions, vector);
+
+		// reassign expanded by
+		// don't need to mark as visited
+		vector->expanded_by = &hanselChainSet[i][j];
+		vector->_class = vector_class;
+	}
+
+	// the vector is a strong value if it is maximum function kv and was up expanded
+	if (vector->_class == function_kv - 1)
+	{
+		vector->weak = false;
+		vector->confirmed = true; // always confirmed when Boolean
+		numConfirmedInChains[vector->number.first - 1]++;
+	}
+}
+
+
+void expertDataMining::checkUp(int i, int j, int vector_class, std::map<int, std::vector<int>>* visited_map)
+{
+	for (auto vector : hanselChainSet[i][j].up_expandable)
+	{
+		int e_i = vector->number.first - 1;
+		int e_j = vector->number.second - 1;
+		// base case
+		// if vector is not in visited map, then recurse
+		if (visited_map->find(e_i) == visited_map->end() ||
+			!std::binary_search(visited_map->at(e_i).begin(), visited_map->at(e_i).end(), e_j))
+		{
+			expandUp(i, j, vector, vector_class);
+
+			// insert expanded vector into map
+			if (visited_map->find(e_i) == visited_map->end())
+			{
+				visited_map->insert(std::pair<int, std::vector<int>>(e_i, std::vector<int>{e_j}));
+			}
+			else
+			{
+				visited_map->at(e_i).push_back(e_j);
+			}
+
+			// recurse on expanded vector
+			checkUp(e_i, e_j, vector->_class, visited_map);
+		}
+	}
+}
+
+
+void expertDataMining::expandDown(int i, int j, dvector* vector, int vector_class)
+{
+	if (!vector->visited)
+	{
+		hanselChainSet[i][j].down_expansions.push_back(vector);
+		vector->expanded_by = &hanselChainSet[i][j];
+		vector->_class = vector_class;
+		vector->visited = true;
+		vector->lessThan = true; // mark as "less than or equal to" for the vector class
+	}
+
+	// if vector class is less than the current class even though the previous was already visited
+	// the vector class must be "less than or equal to", in this case.
+	else if (vector_class < vector->_class && vector->lessThan && !vector->asked)
+	{
+		// delete the pointer to this vector in the vector that expanded this one
+		std::erase(vector->expanded_by->down_expansions, vector);
+
+		// reassign expanded by
+		// don't need to mark as visited
+		vector->expanded_by = &hanselChainSet[i][j];
+		vector->_class = vector_class;
+	}
+
+	// the vector is a strong value if is 0 and was down expanded
+	if (vector->_class == 0)
+	{
+		vector->weak = false;
+		vector->confirmed = true; // always confirmed when Boolean
+		numConfirmedInChains[vector->number.first - 1]++;
+	}
+}
+
+
+void expertDataMining::checkDown(int i, int j, int vector_class, std::map<int, std::vector<int>>* visited_map)
+{
+	for (auto vector : hanselChainSet[i][j].down_expandable)
+	{
+		// update i and j with location for expanded vector
+		int e_i = vector->number.first - 1;
+		int e_j = vector->number.second - 1;
+
+		// base case
+		// if vector is not in visited map, then recurse
+		if (visited_map->find(e_i) == visited_map->end() ||
+			!std::binary_search(visited_map->at(e_i).begin(), visited_map->at(e_i).end(), e_j))
+		{
+			expandDown(i, j, vector, vector_class);
+
+			// insert expanded vector into map
+			if (visited_map->find(e_i) == visited_map->end())
+			{
+				// make new vector in the map for hansel chain at e_i 
+				visited_map->insert(std::pair<int, std::vector<int>>(e_i, std::vector<int>{e_j}));
+			}
+			else
+			{
+				// insert into existing hansel chain
+				visited_map->at(e_i).push_back(e_j);
+			}
+
+			checkDown(e_i, e_j, vector->_class, visited_map);
+		}
+	}
+}
+
+
+void expertDataMining::findDualExpansion(int i)
+{
+	int chainSize = (int)hanselChainSet[i].size();
+
+	for (int l = 0, r = chainSize - 1; l < chainSize - 1 && r > 0; l += 2, r += 2)
+	{
+		// dual expansion if classes are not zero, are equal, but not the same vector
+		if (hanselChainSet[i][l]._class != -1 && hanselChainSet[i][l]._class == hanselChainSet[i][r]._class &&
+			&hanselChainSet[i][l] == &hanselChainSet[i][r])
+		{
+			dualExpansion(i, l, r);
+
+			return;
+		}
+		else if (hanselChainSet[i][l + 1]._class != -1 && hanselChainSet[i][l + 1]._class == hanselChainSet[i][r]._class &&
+			&hanselChainSet[i][l + 1] == &hanselChainSet[i][r])
+		{
+			dualExpansion(i, l + 1, r);
+
+			return;
+		}
+		else if (hanselChainSet[i][l]._class != -1 && hanselChainSet[i][l]._class == hanselChainSet[i][r - 1]._class &&
+			&hanselChainSet[i][l] == &hanselChainSet[i][r - 1])
+		{
+			dualExpansion(i, l, r - 1);
+
+			return;
+		}
+		else if (hanselChainSet[i][l + 1]._class != -1 && hanselChainSet[i][l + 1]._class == hanselChainSet[i][r - 1]._class &&
+			&hanselChainSet[i][l + 1] == &hanselChainSet[i][r - 1])
+		{
+			dualExpansion(i, l + 1, r - 1);
+
+			return;
+		}
+	}
+}
+
+
+void expertDataMining::dualExpansion(int i, int l, int r)
+{
+	if (hanselChainSet[i][l]._class == hanselChainSet[i][r]._class)
+	{
+		// j is for current to be expanded vector
+		for (int j = l + 1; l < r; j++)
+		{
+			hanselChainSet[i][j]._class = hanselChainSet[i][l]._class;
+			hanselChainSet[i][j - 1].up_expansions.push_back(&hanselChainSet[i][j]);
+			hanselChainSet[i][j].expanded_by = &hanselChainSet[i][j - 1];
+			hanselChainSet[i][j].visited = true;
+
+
+			// the vector is a strong value if it is maximum function kv and was up expanded
+			if (hanselChainSet[i][j]._class == function_kv - 1)
+			{
+				hanselChainSet[i][j].weak = false;
+				hanselChainSet[i][j].confirmed = true; // always confirmed when Boolean
+				numConfirmedInChains[i]++;
+			}
+			// the vector is a strong value if is 0 and was down expanded
+			else if (hanselChainSet[i][j]._class == 0)
+			{
+				hanselChainSet[i][j].weak = false;
+				hanselChainSet[i][j].confirmed = true; // always confirmed when Boolean
+				numConfirmedInChains[i]++;
+			}
+		}
 	}
 }
 
@@ -1881,6 +2024,7 @@ int expertDataMining::askingOfQuestion(int i, int j)
 		questionsAsked++;
 		hanselChainSet[i][j].asked = true;
 		hanselChainSet[i][j].confirmed = true;
+		numConfirmedInChains[i]++;
 		hanselChainSet[i][j].finalQueryOrder = questionsAsked;
 	}
 
@@ -2073,6 +2217,7 @@ std::vector<int> expertDataMining::init()
 
 	calculateHanselChains(dimension);
 	numChains = (int)hanselChainSet.size();
+	numConfirmedInChains.resize(numChains);
 	hanselChainOrder.resize(numChains);
 	chainsVisited.resize(numChains);
 

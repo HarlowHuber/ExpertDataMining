@@ -94,6 +94,8 @@ public:
 		int trueIndex = -1; // index location for value
 	};
 
+	// the number of confirmed values in each chain
+	std::vector<int> numConfirmedInChains;
 
 	/// @brief flag for developer. Ask KV questions, yes or no?
 	bool askKV = true;
@@ -256,12 +258,25 @@ public:
 	void possibleExpansions(int newValue, int i, int j, int p, int startChain);
 
 
+	/// @brief aux function used to expand a vector upwards
+	/// @param vector 
+	/// @param vector_class 
+	void expandUp(int i, int j, dvector* vector, int vector_class);
+
+
+	/// @brief aux function used to expand a vector downwards
+	/// @param vector 
+	/// @param vector_class 
+	void expandDown(int i, int j, dvector* vector, int vector_class);
+
+
 	/// @brief check up Expansions
 	/// @param i 
 	/// @param j 
 	/// @param vector_class 
+	/// @param visited_map since multiple sources 
 	/// @return true when recursion should be used. false otherwise
-	bool checkUp(int i, int j, int vector_class);
+	void checkUp(int i, int j, int vector_class, std::map<int, std::vector<int>>*);
 
 
 	/// @brief check down expansions. 
@@ -269,7 +284,26 @@ public:
 	/// @param j 
 	/// @param vector_class 
 	/// @return true if recursion should be used. false otherwise
-	bool checkDown(int i, int j, int vector_class);
+	void checkDown(int i, int j, int vector_class, std::map<int, std::vector<int>>*);
+
+	
+	/// @brief expand an entire chain
+	/// @param i 
+	/// @param j 
+	/// @param vector_class 
+	void chainExpansions(int i, int j, int vector_class);
+
+
+	/// @brief find a dual expansion in a chain
+	/// @param i 
+	void findDualExpansion(int i);
+
+
+	/// @brief expand the space between two datapoints
+	/// @param i the hansel chain
+	/// @param l left 
+	/// @param r right
+	void dualExpansion(int i, int l, int r);
 
 
 	/// @brief checks the possible expansions for a given vector (i, j), and expands those vectors if possible. recurses breadthwise to get all possible expansions
