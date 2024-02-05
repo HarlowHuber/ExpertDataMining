@@ -2148,9 +2148,8 @@ std::vector<int> expertDataMining::init()
 			}
 
 			std::cout << "Since parent attributes have been specified (the groupings), the expert data mining process will start with those attributes first." << std::endl;
+			return genericParentOrChildList; // return early since this object will be popped out of the tree anyway
 		}
-
-		return genericParentOrChildList; // return early since this object will be popped out of the tree anyway
 	}
 
 	// name every attribute to reduce confusion for user
