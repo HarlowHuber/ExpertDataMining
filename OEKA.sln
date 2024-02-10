@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.1.32421.90
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ExpertDataMining", "ExpertDataMining.vcxproj", "{A83EB106-267D-41D2-994A-0B385806303A}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "OEKA", "OEKA.vcxproj", "{A83EB106-267D-41D2-994A-0B385806303A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

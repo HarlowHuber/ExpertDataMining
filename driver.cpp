@@ -1,7 +1,7 @@
-#include "edmDriver.h"
+#include "driver.h"
 
 
-void edmDriver::createTree(int index)
+void oekaDriver::createTree(int index)
 {
 	if (index >= tree.size())
 	{
@@ -54,15 +54,15 @@ void edmDriver::createTree(int index)
 
 			try
 			{
-				expertDataMining child = NULL;
+				oeka child = NULL;
 
 				if (k > 2)
 				{
-					child = expertDataMining(attributeSymbols[currentAttrSymbol++], parentAttribute, c, k); // constructor with parent attribute and given function k
+					child = oeka(attributeSymbols[currentAttrSymbol++], parentAttribute, c, k); // constructor with parent attribute and given function k
 				}
 				else
 				{
-					child = expertDataMining(attributeSymbols[currentAttrSymbol++], parentAttribute, c); // constructor with parent attribute
+					child = oeka(attributeSymbols[currentAttrSymbol++], parentAttribute, c); // constructor with parent attribute
 				}
 
 				addChild(child, index);
@@ -99,7 +99,7 @@ void edmDriver::createTree(int index)
 			childAttributes.push_back(group);
 		}
 
-		auto parent = expertDataMining(attributeSymbols[currentAttrSymbol++], childAttributes); // dimension is size of childAttributes
+		auto parent = oeka(attributeSymbols[currentAttrSymbol++], childAttributes); // dimension is size of childAttributes
 		addParent(parent, oldNode);
 
 		// DO THIS HERE AGAIN SO WE CAN GET K-VALUE AND THEN INITIALIZE CHILDREN WITH K-VALUE!!!!!
@@ -112,7 +112,7 @@ void edmDriver::createTree(int index)
 			int k = tree[index].edm.attributes[i].kv; // attributes at i because dimension of childAttributes and the parent match
 
 			std::string parentAttribute = tree[index].edm.attributeSymbol + std::to_string(i + 1);
-			auto child = expertDataMining(attributeSymbols[currentAttrSymbol++], parentAttribute, (int)childAttributes[i].size(), k);
+			auto child = oeka(attributeSymbols[currentAttrSymbol++], parentAttribute, (int)childAttributes[i].size(), k);
 			addChild(child, index);
 		}
 
@@ -126,7 +126,7 @@ void edmDriver::createTree(int index)
 }
 
 
-void edmDriver::executeTree()
+void oekaDriver::executeTree()
 {
 	std::vector<int> childrenIndices;
 
@@ -148,7 +148,7 @@ void edmDriver::executeTree()
 }
 
 
-void edmDriver::executeTreeHelper(std::vector<int> childrenIndices)
+void oekaDriver::executeTreeHelper(std::vector<int> childrenIndices)
 {
 	if (childrenIndices.empty())
 	{
@@ -171,7 +171,7 @@ void edmDriver::executeTreeHelper(std::vector<int> childrenIndices)
 }
 
 
-void edmDriver::printTree() 
+void oekaDriver::printTree() 
 {
 	// print to a file a legend for the function hiearchy
 	hierarchy.open("function_hierarchy.txt", std::ios::out | std::ios::app);
@@ -207,7 +207,7 @@ void edmDriver::printTree()
 }
 
 
-void edmDriver::printTreeChildren(std::vector<int> childrenIndices)
+void oekaDriver::printTreeChildren(std::vector<int> childrenIndices)
 {
 	if (childrenIndices.empty())
 	{
@@ -239,7 +239,7 @@ void edmDriver::printTreeChildren(std::vector<int> childrenIndices)
 }
 
 
-void edmDriver::printTreeHierarchy(int i)
+void oekaDriver::printTreeHierarchy(int i)
 {
 	if (tree[i].edm.childAttributes.empty())
 	{
@@ -270,7 +270,7 @@ void edmDriver::printTreeHierarchy(int i)
 }
 
 
-edmDriver::edmDriver()
+oekaDriver::oekaDriver()
 {
 	attributeSymbols.reserve(26);
 
@@ -279,7 +279,7 @@ edmDriver::edmDriver()
 		attributeSymbols.push_back(i);
 	}
 
-	expertDataMining edm(attributeSymbols[currentAttrSymbol++]);
+	oeka edm(attributeSymbols[currentAttrSymbol++]);
 
 	Node node = { "", edm, -1, {}};
 	tree.push_back(node);
@@ -290,7 +290,7 @@ edmDriver::edmDriver()
 }
 
 
-void edmDriver::addChild(expertDataMining& child, int parent_index)
+void oekaDriver::addChild(oeka& child, int parent_index)
 {
 	// create node and add to tree
 	Node node = Node("", child, parent_index, {});
@@ -302,7 +302,7 @@ void edmDriver::addChild(expertDataMining& child, int parent_index)
 }
 
 
-void edmDriver::addParent(expertDataMining& parent, Node& oldNode)
+void oekaDriver::addParent(oeka& parent, Node& oldNode)
 {
 	parent.parent_attribute = oldNode.edm.parent_attribute; // oldNode parent is same as the new parent's parent
 	Node node = Node("", parent, oldNode.parent, {});
@@ -327,7 +327,7 @@ void edmDriver::addParent(expertDataMining& parent, Node& oldNode)
 }
 
 
-edmDriver::Node edmDriver::pop(int index)
+oekaDriver::Node oekaDriver::pop(int index)
 {
 	Node node = tree[index];
 	tree.erase(tree.begin() + index);
@@ -353,7 +353,7 @@ edmDriver::Node edmDriver::pop(int index)
 
 int main()
 {
-	auto d = edmDriver();
+	auto d = oekaDriver();
 
 	return EXIT_SUCCESS;
 }

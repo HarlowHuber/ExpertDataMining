@@ -1,7 +1,7 @@
-#include "expertDataMining.h"
+#include "oeka.h"
 
 
-class edmDriver
+class oekaDriver
 {
 public:
 
@@ -9,7 +9,7 @@ public:
 	struct Node
 	{
 		std::string name;			// name of the function
-		expertDataMining edm;
+		oeka edm;
 		int parent;					// index location in tree. should be given -1 if there is no parent
 		std::vector<int> children;	// index locations in tree. empty if no children
 	};
@@ -56,15 +56,15 @@ public:
 
 
 	/// @brief constructor
-	edmDriver();
+	oekaDriver();
 
 
 	/// @brief add a child node to tree
-	void addChild(expertDataMining& child, int parent_index);
+	void addChild(oeka& child, int parent_index);
 
 
 	/// @brief add a parent node to tree
-	void addParent(expertDataMining& parent, Node& oldNode);
+	void addParent(oeka& parent, Node& oldNode);
 
 
 	/// @brief pop the node at the corresponding index off the tree.

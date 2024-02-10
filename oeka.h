@@ -17,7 +17,7 @@ Supervisor: Dr. Boris Kovalerchuk
 #include <iomanip>
 #include <filesystem>
 
-class expertDataMining
+class oeka
 {
 public:
 	/// @brief dvector, or datapoint vector, is simply a vector with information about a datapoint
@@ -409,7 +409,7 @@ public:
 
 
 	/// @brief constructor. Used for the main boolean function.
-	expertDataMining(char attributeSymbol);
+	oeka(char attributeSymbol);
 
 
 	/// @brief constructor. Used for sub-functions in a  top-down approach
@@ -425,7 +425,7 @@ public:
 	/// @brief constructor. Used to create sub-functions for a parent functions in a bottom-up approach
 	/// @param parent_attribute is the number of the attribute that the expert data mining object is for
 	/// @paraam dimension is the dimension
-	expertDataMining(char attributeSymbol, std::string parent_attribute, int dimension);
+	oeka(char attributeSymbol, std::string parent_attribute, int dimension);
 
 
 	/// @brief similar constructor as above, but with a function k-value
@@ -433,13 +433,13 @@ public:
 	/// @param parent_attribute 
 	/// @param dimension 
 	/// @param function_kv
-	expertDataMining(char attributeSymbol, std::string parent_attribute, int dimension, int function_kv);
+	oeka(char attributeSymbol, std::string parent_attribute, int dimension, int function_kv);
 
 
 	/// @brief initialize parent with associated attributes already given
 	/// @param attributeSymbol 
 	/// @param asociated_attributes 
-	expertDataMining(char attributeSymbol,std::vector<std::vector<std::string>> childAttributes);
+	oeka(char attributeSymbol,std::vector<std::vector<std::string>> childAttributes);
 
 
 	/// @brief start the expert data mining sequence for any nested attributes

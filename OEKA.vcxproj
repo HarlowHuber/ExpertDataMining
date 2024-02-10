@@ -140,12 +140,15 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="edmDriver.cpp" />
-    <ClCompile Include="expertDataMining.cpp" />
+    <ClCompile Include="driver.cpp" />
+    <ClCompile Include="oekaAuxiliary.cpp" />
+    <ClCompile Include="oekaExperimental.cpp" />
+    <ClCompile Include="oekaGraph.cpp" />
+    <ClCompile Include="oekaMethods.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="edmDriver.h" />
-    <ClInclude Include="expertDataMining.h" />
+    <ClInclude Include="driver.h" />
+    <ClInclude Include="oeka.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
