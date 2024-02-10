@@ -1267,39 +1267,29 @@ void expertDataMining::changeAttributesOfRealData(std::vector<std::vector<int>> 
 
 void expertDataMining::binarySearch(int i, int l, int r)
 {
-	while (l <= r)
+	if (l <= r)
 	{
 		int j = l + (r - l) / 2; // this is middle
 		int vector_class = -1;
 
-		if (questionFunc(i, j, vector_class))
+		if (!questionFunc(i, j, vector_class))
 		{
-			continue;
-		}
+			// should expand everything
+			checkExpansions(vector_class, i, j);
 
-		//chainExpansions(i, j, vector_class);
-
-		// should expand everything
-		checkExpansions(vector_class, i, j);
-
-		// dual expansions
-		dualExpansion(i, l, j);
-		dualExpansion(i, j, r);
-
-		// update chainsFinished
-		for (int k = 0; k < hanselChainSet[i].size(); k++)
-		{
-
+			// dual expansions
+			dualExpansion(i, l, j);
+			dualExpansion(i, j, r);
 		}
 
 		if (vector_class == function_kv - 1)
 		{
-			// go to start of chain
+			// update r with middle, go to left side
 			binarySearch(i, l, j - 1);
 		}
 		else if (vector_class == 0)
 		{
-			// go to end of chain
+			// update left with middle, go to right side
 			binarySearch(i, j + 1, r);
 		}
 		else
@@ -1325,34 +1315,6 @@ void expertDataMining::staticOrderQuestionsFunc()
 		int start = l + (r - l) / 2;
 		
 		binarySearch(i, l, r);
-
-		// Boolean only
-		// check if the skipped l or r side has anything that wasnt expanded
-		// make checkExpansions recursive would solve issues maybe?
-		/*if (function_kv == 2)
-		{
-			if (hanselChainSet[i][start]._class >= 1)
-			{
-				for (int j = start + 1; j < chainSize; j++)
-				{
-					if (!hanselChainSet[i][j - 1].visited)
-					{
-						checkExpansions(hanselChainSet[i][j - 1]._class, i, j);
-					}
-				}
-			}
-			else
-			{
-				for (int j = start - 1; j >= 0; j--)
-				{
-					if (!hanselChainSet[i][j + 1].visited)
-					{
-						checkExpansions(hanselChainSet[i][j + 1]._class, i, j);
-					}
-				}
-			}
-		}*/
-
 
 		/*
 		// non-binary method
@@ -1672,7 +1634,9 @@ void expertDataMining::checkExpansions(int vector_class, int i, int j)
 	// now go through and find any dual expansions
 	for (int k = 0; k < numChains; k++)
 	{
-		if (numConfirmedInChains[k] != (int)hanselChainSet[k].size())
+		int s = (int)hanselChainSet[k].size();
+
+		if (numConfirmedInChains[k] <= s - 2 && s > 2)
 		{
 			findDualExpansion(k);
 		}

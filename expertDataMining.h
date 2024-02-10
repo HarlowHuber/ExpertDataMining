@@ -220,7 +220,7 @@ public:
 	/// @param i the Hansel Chain
 	/// @param j the vector in the Hansel Chain
 	/// @param vector_class vector class variable to be assigned to
-	/// @return true if the vector is to be expanded. False otherwise
+	/// @return true if the vector was already expanded (skip this vector). False otherwise.
 	bool questionFunc(int i, int j, int& vector_class);
 
 
