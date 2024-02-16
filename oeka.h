@@ -395,14 +395,6 @@ public:
 	void printTable(std::fstream& results, std::vector<int> targets, std::vector<std::string> boolFuncStrSimplified, std::vector<std::string> boolFuncStrNonSimplified, bool include_f_change);
 
 
-	/// @brief generic printing function
-	/// @tparam T 
-	/// @param t 
-	/// @param width the width of the output in terms of character spaces
-	/// @param separator the characters to use as fillers in the output if needed to reach the specified width
-	template<typename T>
-	void print(T t, const int& width, const char& separator);
-
 
 	/// @brief parse a string by a given delimiter
 	std::vector<std::string> parse_input(char delimiter, std::string temp);
@@ -454,7 +446,31 @@ public:
 
 	/// @brief start expert data mining sequence
 	void start();
+
+
+	/// @brief create adjacency matrix of Hansel Chains
+	/// @return adjacency matrix in the form of a vector
+	std::vector<int[3]> createGraph();
+
+
+	std::vector<std::vector<int>> kruskal(std::vector<int[3]>);
+
+
+	int chainHammingDistance(int l, int r);
+
+
+	int chainHausdorffDistance(int l, int r);
 };
+
+
+/// @brief generic printing function
+/// @tparam T 
+/// @param t 
+/// @param width the width of the output in terms of character spaces
+/// @param separator the characters to use as fillers in the output if needed to reach the specified width
+template<typename T>
+void print(T t, const int& width, const char& separator);
+
 
 /// @brief << overload for printing std::vector<int>
 std::ostream& operator<<(std::ostream& out, const std::vector<int>& v);
