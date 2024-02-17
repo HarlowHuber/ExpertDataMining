@@ -1,12 +1,12 @@
 #include "oeka.h"
 
 
-std::vector<int[3]> oeka::createGraph()
+std::vector<std::array<int, 3>> oeka::createGraph()
 {
 	// initilize edge list
 	// first number and second numbers are location of the Hansel Chain
 	// last number is the distance between them.
-	std::vector<int[3]> edgeList;
+	std::vector<std::array<int, 3>> edgeList;
 
 	int n = (numChains / 2) + (numChains % 2); // number of edges is n(n - 1) / 2, where n is numChains
 
@@ -25,12 +25,13 @@ std::vector<int[3]> oeka::createGraph()
 }
 
 
-std::vector<std::vector<int>> oeka::kruskal(std::vector<int[3]> edgeList)
+std::vector<std::array<int, 3>>  oeka::kruskal(std::vector<std::array<int, 3>> edgeList)
 {
 	std::sort(edgeList.begin(), edgeList.end(),
 		[](auto const& l, auto const& r) { return l[2] < r[2]; });
 
 	// finish
+	return edgeList;
 }
 
 
@@ -76,7 +77,8 @@ int oeka::chainHammingDistance(int l, int r)
 		
 	}
 
-
+	// finish
+	return 0;
 
 }
 

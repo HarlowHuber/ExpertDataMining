@@ -16,6 +16,7 @@ Supervisor: Dr. Boris Kovalerchuk
 #include <unordered_map>
 #include <iomanip>
 #include <filesystem>
+#include <array>
 
 class oeka
 {
@@ -450,10 +451,10 @@ public:
 
 	/// @brief create adjacency matrix of Hansel Chains
 	/// @return adjacency matrix in the form of a vector
-	std::vector<int[3]> createGraph();
+	std::vector<std::array<int, 3>> createGraph();
 
 
-	std::vector<std::vector<int>> kruskal(std::vector<int[3]>);
+	std::vector<std::array<int, 3>>  kruskal(std::vector<std::array<int, 3>> edgeList);
 
 
 	int chainHammingDistance(int l, int r);
