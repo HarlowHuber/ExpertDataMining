@@ -886,7 +886,7 @@ void oeka::dualExpansion(int i, int l, int r)
 	if (hanselChainSet[i][l]._class == hanselChainSet[i][r]._class)
 	{
 		// j is for current to be expanded vector
-		for (int j = l + 1; l < r; j++)
+		for (int j = l + 1; j < r; j++)
 		{
 			hanselChainSet[i][j]._class = hanselChainSet[i][l]._class;
 			hanselChainSet[i][j - 1].up_expansions.push_back(&hanselChainSet[i][j]);
