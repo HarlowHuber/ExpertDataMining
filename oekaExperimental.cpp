@@ -123,7 +123,7 @@ void oeka::f_change_check()
 	}
 
 	// parse user input
-	auto tokens = parse_input(',', temp);
+	auto tokens = parse_input_string(',', temp);
 
 	// fix any violations of monotonicity
 	for (auto token : tokens)
@@ -667,7 +667,7 @@ std::vector<std::vector<int>> oeka::addNewAttributesToRealData()
 	{
 		std::string str;
 		std::getline(file, str);
-		auto tokens = parse_input(',', str);
+		auto tokens = parse_input_string(',', str);
 		real_attributes = tokens;
 		int attributesToAdd = dimension - ((int)tokens.size() - 1); // subtract 1 because last element is class
 
@@ -681,7 +681,7 @@ std::vector<std::vector<int>> oeka::addNewAttributesToRealData()
 
 			for (auto token : temp)
 			{
-				tokens.push_back(stoi(token));
+				tokens.push_back(token);
 			}
 
 			dataset.push_back(tokens);

@@ -30,6 +30,9 @@ public:
 		/// @brief the class or value of the dataPoint
 		int _class = -1;
 
+		/// @brief the class of the dataPoint, as determined by the Oracle (for use in testing of question reduction methods)
+		int oracle = -1;
+
 		/// @brief confirmed answer through either answering the question, Boolean expansion, or double-expansion (terminology for this is tentative)
 		bool confirmed = false;
 
@@ -397,8 +400,12 @@ public:
 
 
 
-	/// @brief parse a string by a given delimiter
-	std::vector<std::string> parse_input(char delimiter, std::string temp);
+	/// @brief parse a string by a given delimiter into a vector of ints
+	std::vector<int> parse_input(char delimiter, std::string temp);
+
+
+	/// @brief parse a string by a given delimeter into a vector of strings
+	std::vector<std::string> parse_input_string(char delimiter, std::string temp);
 
 
 	/// @brief constructor. Used for the main boolean function.
@@ -461,6 +468,12 @@ public:
 
 
 	int chainHausdorffDistance(int l, int r);
+
+
+	std::map<int, std::vector<std::vector<int>>> readFile(std::string fileName);
+
+
+	void assignOracle(std::map<int, std::vector<std::vector<int>>> oracle);
 };
 
 

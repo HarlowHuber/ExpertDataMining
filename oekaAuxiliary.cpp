@@ -28,7 +28,27 @@ std::ostream& operator<<(std::ostream& out, const std::pair<int, int>& p)
 }
 
 
-std::vector<std::string>oeka::parse_input(char delimiter, std::string temp)
+std::vector<int> oeka::parse_input(char delimiter, std::string temp)
+{
+	// parse a string by a delimiter
+	std::vector<int> tokens;
+	std::string token;
+	int pos = 0;
+
+	while ((pos = (int)temp.find(",")) != std::string::npos)
+	{
+		token = temp.substr(0, pos);
+		tokens.push_back(stoi(token));
+		temp.erase(0, pos + 1);
+	}
+
+	tokens.push_back(stoi(temp));
+
+	return tokens;
+}
+
+
+std::vector<std::string> oeka::parse_input_string(char delimiter, std::string temp)
 {
 	// parse a string by a delimiter
 	std::vector<std::string> tokens;
@@ -92,7 +112,7 @@ std::vector<int> oeka::init()
 
 		auto tokens = parse_input(',', temp);
 
-		if (!tokens.empty() && tokens[0] != "-1")
+		if (!tokens.empty() && tokens[0] != -1)
 		{
 			genericParentOrChildList.reserve((int)tokens.size() + 1);
 			genericParentOrChildList.push_back(-1);
@@ -101,8 +121,8 @@ std::vector<int> oeka::init()
 			{
 				try
 				{
-					int i = stoi(token);
-					genericParentOrChildList.push_back(i);
+					//int i = stoi(token);
+					genericParentOrChildList.push_back(token);
 				}
 				catch (std::exception& e)
 				{
@@ -146,7 +166,7 @@ std::vector<int> oeka::init()
 				{
 					try
 					{
-						genericParentOrChildList.push_back(stoi(token)); // each attribute in this group
+						genericParentOrChildList.push_back(token); // each attribute in this group
 					}
 					catch (std::exception& e)
 					{
@@ -227,6 +247,13 @@ std::vector<int> oeka::init()
 	numConfirmedInChains.resize(numChains);
 	hanselChainOrder.resize(numChains);
 	chainsVisited.resize(numChains);
+
+	// automatic testing by using a dataset as an oracle
+	if (std::filesystem::exists("test.csv"))
+	{
+		auto oracle = readFile("test.csv");
+		assignOracle(oracle);
+	}
 
 	// let the user determine the order of the Hansel Chains
 	std::cout << "\nWhat order to use for the Hansel Chains?";
@@ -597,7 +624,7 @@ void oeka::printToFile(std::fstream& results)
 	std::vector<std::string> boolFuncsSimplified;
 	std::vector<int> restoreValues;
 	std::string tmp;
-	std::vector<std::string> tokens;
+	std::vector<int> tokens;
 	std::vector<int> targets;
 
 	//std::cout << "Restore function for all values of kn+1? Please Enter (1/0): " << std::flush;
@@ -632,7 +659,7 @@ void oeka::printToFile(std::fstream& results)
 
 		for (auto token : tokens)
 		{
-			int target = stoi(token);
+			int target = token;
 			targets.push_back(target);
 			boolFunc = restoreFunction(target);
 			auto str = functionToString(boolFunc, ">=");

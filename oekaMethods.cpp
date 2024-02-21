@@ -415,7 +415,6 @@ void oeka::findMajorityVectors()
 }
 
 
-
 void oeka::binarySearch(int i, int l, int r)
 {
 	if (l <= r)

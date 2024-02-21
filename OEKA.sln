@@ -5,6 +5,8 @@ VisualStudioVersion = 17.1.32421.90
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "OEKA", "OEKA.vcxproj", "{A83EB106-267D-41D2-994A-0B385806303A}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MonotoneDataGenerator", "MonotoneDataGenerator\MonotoneDataGenerator.vcxproj", "{CBCBDE1B-21FD-4396-B25A-CD4C37348352}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -21,6 +23,14 @@ Global
 		{A83EB106-267D-41D2-994A-0B385806303A}.Release|x64.Build.0 = Release|x64
 		{A83EB106-267D-41D2-994A-0B385806303A}.Release|x86.ActiveCfg = Release|Win32
 		{A83EB106-267D-41D2-994A-0B385806303A}.Release|x86.Build.0 = Release|Win32
+		{CBCBDE1B-21FD-4396-B25A-CD4C37348352}.Debug|x64.ActiveCfg = Debug|x64
+		{CBCBDE1B-21FD-4396-B25A-CD4C37348352}.Debug|x64.Build.0 = Debug|x64
+		{CBCBDE1B-21FD-4396-B25A-CD4C37348352}.Debug|x86.ActiveCfg = Debug|Win32
+		{CBCBDE1B-21FD-4396-B25A-CD4C37348352}.Debug|x86.Build.0 = Debug|Win32
+		{CBCBDE1B-21FD-4396-B25A-CD4C37348352}.Release|x64.ActiveCfg = Release|x64
+		{CBCBDE1B-21FD-4396-B25A-CD4C37348352}.Release|x64.Build.0 = Release|x64
+		{CBCBDE1B-21FD-4396-B25A-CD4C37348352}.Release|x86.ActiveCfg = Release|Win32
+		{CBCBDE1B-21FD-4396-B25A-CD4C37348352}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
