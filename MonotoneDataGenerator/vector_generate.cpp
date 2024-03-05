@@ -7,6 +7,7 @@ vector_generate::vector_generate(int* _kv_attributes, int kv_target, int _num_at
 	auto start = std::chrono::high_resolution_clock::now();
 	kv_attributes = _kv_attributes;
 	num_attributes = _num_attributes;
+	function_kv = kv_target;
 	std::vector<int> max_vector(num_attributes);
 
 	// construct maximum vector
@@ -180,7 +181,13 @@ void vector_generate::print_sorted_vectors(std::vector<std::multimap<int, struct
 {
 	std::ofstream file;
 	file.open("test.csv");
-	file << num_attributes << std::endl;
+	 
+	for (int i = 0; i < num_attributes; i++)
+	{
+		file << kv_attributes[i] << ",";
+	}
+
+	file << function_kv << "," << std::endl;
 
 	for (int i = (int)sorted_vectors.size() - 1; i >= 0; i--)
 	{

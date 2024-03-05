@@ -28,7 +28,7 @@ std::ostream& operator<<(std::ostream& out, const std::pair<int, int>& p)
 }
 
 
-std::vector<int> oeka::parse_input(char delimiter, std::string temp)
+std::vector<int> oeka::parse_input_int(char delimiter, std::string temp)
 {
 	// parse a string by a delimiter
 	std::vector<int> tokens;
@@ -42,7 +42,10 @@ std::vector<int> oeka::parse_input(char delimiter, std::string temp)
 		temp.erase(0, pos + 1);
 	}
 
-	tokens.push_back(stoi(temp));
+	if (temp != "")
+	{
+		tokens.push_back(stoi(temp)); 
+	}
 
 	return tokens;
 }
@@ -85,88 +88,59 @@ std::vector<int> oeka::init()
 {
 	std::vector<int> genericParentOrChildList;
 
-	if (dimension <= 0) // only executed when the constructor was not initialized with a child_attributes 
+	// automatic testing by using a dataset as an oracle
+	if (useOracle && std::filesystem::exists(oraclePath))
 	{
-		std::cout << "How many attributes are in this dataset (what is the dimension)?";
-		std::cout << "\nEnter: " << std::flush;
-		std::cin >> dimension;
-		std::cin.clear();
-		std::cin.ignore(1000, '\n');
+		auto oracle = readFile(oraclePath);
 
-		attributes.resize(dimension);
+		calculateHanselChains(dimension);
+		numChains = (int)hanselChainSet.size();
+		numConfirmedInChains.resize(numChains);
+		hanselChainOrder.resize(numChains);
+		chainsVisited.resize(numChains);
 
-		// start sub-functions
-		std::cout << "Are there any nested attributes (sub-functions) for this dataset?"
-			<< "\nIf not, then enter -1. If yes, please enter a comma-delimited list of which attributes have nested attributes, where:" << std::endl;
-
-		for (int i = 1; i < dimension + 1; i++)
-		{
-			std::cout << i << " - x" << i << std::endl;
-		}
-
-		std::cout << "Please enter: " << std::flush;
-		std::string temp;
-		std::getline(std::cin, temp);
-		std::cin.clear();
-		std::cin.ignore(1000, '\n');
-
-		auto tokens = parse_input(',', temp);
-
-		if (!tokens.empty() && tokens[0] != -1)
-		{
-			genericParentOrChildList.reserve((int)tokens.size() + 1);
-			genericParentOrChildList.push_back(-1);
-
-			for (auto token : tokens)
-			{
-				try
-				{
-					//int i = stoi(token);
-					genericParentOrChildList.push_back(token);
-				}
-				catch (std::exception& e)
-				{
-					std::cerr << "User input fail. " << e.what() << std::endl;
-				}
-			}
-		}
-		// end sub-functions
+		assignOracle(oracle);
 	}
-
-	// start parent functions (grouping of attributes)
-	if (dimension > 5)
+	else
 	{
-		std::cout << "Are there any groupings of attributes?"
-			<< "\nIf not, then enter -1. If yes, please enter how many groups there are (please keep this to 2-5 groups): " << std::endl;
-		int groups;
-		std::cin >> groups;
-		std::cin.clear();
-		std::cin.ignore(1000, '\n');
-
-		if (groups > 0)
+		if (dimension <= 0) // only executed when the constructor was not initialized with a child_attributes 
 		{
-			std::cout << "Please note that all attributes must be in a group since this option was chosen, even if that group is of attributes that are unrelated." << std::endl;
+			std::cout << "How many attributes are in this dataset (what is the dimension)?";
+			std::cout << "\nEnter: " << std::flush;
+			std::cin >> dimension;
+			std::cin.clear();
+			std::cin.ignore(1000, '\n');
 
-			genericParentOrChildList.reserve(groups + dimension);
+			attributes.resize(dimension);
 
-			for (int i = 0; i < groups; i++)
+			// start sub-functions
+			std::cout << "Are there any nested attributes (sub-functions) for this dataset?"
+				<< "\nIf not, then enter -1. If yes, please enter a comma-delimited list of which attributes have nested attributes, where:" << std::endl;
+
+			for (int i = 1; i < dimension + 1; i++)
 			{
-				std::cout << "Please enter a comma-delimited list of what attributes are in group " << i + 1 << ": " << std::flush;
+				std::cout << i << " - x" << i << std::endl;
+			}
 
-				std::string temp;
-				std::getline(std::cin, temp);
-				std::cin.clear();
-				std::cin.ignore(1000, '\n');
+			std::cout << "Please enter: " << std::flush;
+			std::string temp;
+			std::getline(std::cin, temp);
+			std::cin.clear();
+			std::cin.ignore(1000, '\n');
 
-				auto tokens = parse_input(',', temp);
+			auto tokens = parse_input_int(',', temp);
 
-				genericParentOrChildList.push_back((int)tokens.size()); // group size
+			if (!tokens.empty() && tokens[0] != -1)
+			{
+				genericParentOrChildList.reserve((int)tokens.size() + 1);
+				genericParentOrChildList.push_back(-1);
 
 				for (auto token : tokens)
 				{
 					try
 					{
-						genericParentOrChildList.push_back(token); // each attribute in this group
+						//int i = stoi(token);
+						genericParentOrChildList.push_back(token);
 					}
 					catch (std::exception& e)
 					{
@@ -174,10 +148,111 @@ std::vector<int> oeka::init()
 					}
 				}
 			}
-
-			std::cout << "Since parent attributes have been specified (the groupings), the expert data mining process will start with those attributes first." << std::endl;
-			return genericParentOrChildList; // return early since this object will be popped out of the tree anyway
+			// end sub-functions
 		}
+
+		// start parent functions (grouping of attributes)
+		if (dimension > 5)
+		{
+			std::cout << "Are there any groupings of attributes?"
+				<< "\nIf not, then enter -1. If yes, please enter how many groups there are (please keep this to 2-5 groups): " << std::endl;
+			int groups;
+			std::cin >> groups;
+			std::cin.clear();
+			std::cin.ignore(1000, '\n');
+
+			if (groups > 0)
+			{
+				std::cout << "Please note that all attributes must be in a group since this option was chosen, even if that group is of attributes that are unrelated." << std::endl;
+
+				genericParentOrChildList.reserve(groups + dimension);
+
+				for (int i = 0; i < groups; i++)
+				{
+					std::cout << "Please enter a comma-delimited list of what attributes are in group " << i + 1 << ": " << std::flush;
+
+					std::string temp;
+					std::getline(std::cin, temp);
+					std::cin.clear();
+					std::cin.ignore(1000, '\n');
+
+					auto tokens = parse_input_int(',', temp);
+
+					genericParentOrChildList.push_back((int)tokens.size()); // group size
+
+					for (auto token : tokens)
+					{
+						try
+						{
+							genericParentOrChildList.push_back(token); // each attribute in this group
+						}
+						catch (std::exception& e)
+						{
+							std::cerr << "User input fail. " << e.what() << std::endl;
+						}
+					}
+				}
+
+				std::cout << "Since parent attributes have been specified (the groupings), the expert data mining process will start with those attributes first." << std::endl;
+				return genericParentOrChildList; // return early since this object will be popped out of the tree anyway
+			}
+		}
+
+		// ask for k-values for each attribute
+		for (int i = 0; i < dimension; i++)
+		{
+			if (askKV)
+			{
+				std::cout << "\nWhat is the k_value of attribute " + attributes[i].name + "?";
+				std::cout << "\nEnter: " << std::flush;
+
+				try
+				{
+					std::cin >> attributes[i].kv;
+
+					if (attributes[i].kv < 2)
+					{
+						attributes[i].kv = 2;
+					}
+
+					std::cin.clear();
+					std::cin.ignore(1000, '\n');
+				}
+				catch (std::exception& e)
+				{
+					std::cerr << e.what() << std::endl;
+					attributes[i].kv = 2;
+				}
+			}
+			else
+			{
+				attributes[i].kv = 2;
+			}
+		}
+
+		// get function_kv if it wasnt already assigned by the constructor
+		if (function_kv == -1)
+		{
+			std::cout << "What is kn+1? It must be 2 or greater. Please enter: " << std::flush;
+			int c;
+			std::cin >> c;
+
+			if (c < 2)
+			{
+				std::cout << "By default, kn+1 will be 2." << std::endl;
+				function_kv = 2;
+			}
+			else
+			{
+				function_kv = c;
+			}
+		}
+
+		calculateHanselChains(dimension);
+		numChains = (int)hanselChainSet.size();
+		numConfirmedInChains.resize(numChains);
+		hanselChainOrder.resize(numChains);
+		chainsVisited.resize(numChains);
 	}
 
 	// name every attribute to reduce confusion for user
@@ -191,69 +266,6 @@ std::vector<int> oeka::init()
 		attributes[i].name = attributeSymbol + std::to_string(i + 1);
 	}
 
-	// ask for k-values for each attribute
-	// THIS SIMULATION ONLY WORKS FOR K-VALUES OF 2, CURRENTLY!!!
-	for (int i = 0; i < dimension; i++)
-	{
-		if (askKV)
-		{
-			std::cout << "\nWhat is the k_value of attribute " + attributes[i].name + "?";
-			std::cout << "\nEnter: " << std::flush;
-
-			try
-			{
-				std::cin >> attributes[i].kv;
-
-				if (attributes[i].kv < 2)
-				{
-					attributes[i].kv = 2;
-				}
-
-				std::cin.clear();
-				std::cin.ignore(1000, '\n');
-			}
-			catch (std::exception& e)
-			{
-				std::cerr << e.what() << std::endl;
-				attributes[i].kv = 2;
-			}
-		}
-		else
-		{
-			attributes[i].kv = 2;
-		}
-	}
-
-	// get function_kv if it wasnt already assigned by the constructor
-	if (function_kv == -1)
-	{
-		std::cout << "What is kn+1? It must be 2 or greater. Please enter: " << std::flush;
-		int c;
-		std::cin >> c;
-
-		if (c < 2)
-		{
-			std::cout << "By default, kn+1 will be 2." << std::endl;
-			function_kv = 2;
-		}
-		else
-		{
-			function_kv = c;
-		}
-	}
-
-	calculateHanselChains(dimension);
-	numChains = (int)hanselChainSet.size();
-	numConfirmedInChains.resize(numChains);
-	hanselChainOrder.resize(numChains);
-	chainsVisited.resize(numChains);
-
-	// automatic testing by using a dataset as an oracle
-	if (std::filesystem::exists("test.csv"))
-	{
-		auto oracle = readFile("test.csv");
-		assignOracle(oracle);
-	}
 
 	// let the user determine the order of the Hansel Chains
 	std::cout << "\nWhat order to use for the Hansel Chains?";
@@ -655,7 +667,7 @@ void oeka::printToFile(std::fstream& results)
 	{
 		std::cout << "For what values of k " << 0 << function_kv - 1 << " does the user want to restore? Please enter a comma-delimited list: " << std::flush;
 		std::getline(std::cin, tmp);
-		tokens = parse_input(',', tmp);
+		tokens = parse_input_int(',', tmp);
 
 		for (auto token : tokens)
 		{
@@ -687,6 +699,8 @@ void oeka::printToFile(std::fstream& results)
 	boolFuncs.clear();
 	boolFuncsSimplified.clear();
 
+	// commented out because its not being used right now
+	/*
 	// print rectified results
 	results << "\nResults After Applying Any f-Changes\n";
 	f_change_check();
@@ -739,6 +753,7 @@ void oeka::printToFile(std::fstream& results)
 	// close file
 	results << "\n\n";
 	results.close();
+	*/
 }
 
 
@@ -1038,7 +1053,9 @@ void oeka::printTable(std::fstream& results, std::vector<int> targets, std::vect
 			<< "Majority Flag,";
 	}
 
-	results << "Class,";
+	results << "Class,"
+		<< "Oracle,"
+		<< "Confirmed,";
 
 	if (include_f_change)
 	{
@@ -1119,6 +1136,8 @@ void oeka::printTable(std::fstream& results, std::vector<int> targets, std::vect
 			}
 
 			results << hanselChainSet[i][j]._class << ",";
+			results << hanselChainSet[i][j].oracle << ",";
+			results << hanselChainSet[i][j].confirmed << ",";
 
 			if (include_f_change)
 			{

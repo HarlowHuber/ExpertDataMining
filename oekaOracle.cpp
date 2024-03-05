@@ -1,7 +1,7 @@
 #include "oeka.h"
 
 
-// these functions are called in the initialization if the test dataset file is present
+// these functions are called in the initialization if the test dataset file is present as well as useOracle variable in oeka.h
 
 std::map<int, std::vector<std::vector<int>>> oeka::readFile(std::string fileName)
 {
@@ -14,16 +14,34 @@ std::map<int, std::vector<std::vector<int>>> oeka::readFile(std::string fileName
 
 	if (file.is_open())
 	{
+		// get dimension
+		// get k-values
+		// get function kv
 		std::getline(file, line);
+		auto header = parse_input_int(',', line);
+		dimension = (int)header.size() - 1; // subtract 1 to account for the class
+		attributes.resize(dimension);
+
+		for (int i = 0; i < dimension; i++)
+		{
+			attributes[i].kv = header[i];
+		}
+		
+		function_kv = header[dimension];
 		
 		while (file.good())
 		{
 			std::getline(file, line);
-			auto in = parse_input(',', line);
-			h = in[in.size() - 1]; 
-			std::vector<int> v;
-			v.insert(v.begin(), in.begin(), in.end() - 1); // copy vector, except for hamming norm
-			oracle[h].push_back(v);
+			auto in = parse_input_int(',', line);
+
+			// checking if the format is correct
+			if (in.size() > 2)
+			{
+				h = in[in.size() - 1];
+				std::vector<int> v;
+				v.insert(v.begin(), in.begin(), in.end() - 1); // copy vector, except for hamming norm
+				oracle[h].push_back(v);
+			}
 		}
 	}
 
@@ -35,22 +53,12 @@ std::map<int, std::vector<std::vector<int>>> oeka::readFile(std::string fileName
 
 void oeka::assignOracle(std::map<int, std::vector<std::vector<int>>> oracle)
 {
-	/*
-	// map is in ascending order, so last element key + 1 is the number of keys (number of hamming norms)
-	// counter is for keeping track of 
-	std::vector<int> counter(oracle.end()->first + 1); 
-
-	for (auto& [key, value] : oracle)
-	{
-		counter[key] = (int)value.size();
-	}*/
-
 	// index location of class in the oracle, which is simply the last element
-	int c = oracle[0][0][oracle[0][0].size() - 1];
+	int c = oracle[0][0].size() - 1;
 
-	// do this dynamically
-	// store oracle within the hanselChainSet as int
-	// use vector or counter or somethingg to keep track of questions which have already been answered
+	// use vector or counter or somethingg to keep track of questions which have already been answered?
+
+	// iterate over hansel chains
 	for (int i = 0; i < numChains; i++)
 	{
 		for (int j = 0; j < (int)hanselChainSet[i].size(); j++)
@@ -63,6 +71,7 @@ void oeka::assignOracle(std::map<int, std::vector<std::vector<int>>> oracle)
 				h += e;
 			}
 
+			// compare current vector against the oracle (ordered by hamming norm)
 			for (int k = 0; k < (int)oracle[h].size(); k++)
 			{
 				std::vector<int> v;
@@ -76,3 +85,5 @@ void oeka::assignOracle(std::map<int, std::vector<std::vector<int>>> oracle)
 		}
 	}
 }
+
+// add some sort of functionality to store results and run all experiments automatically?

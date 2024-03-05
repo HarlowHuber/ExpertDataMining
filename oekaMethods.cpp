@@ -10,18 +10,18 @@ std::vector<std::vector<oeka::dvector>> oeka::genChains(int num, int vector_dime
 	{
 		for (int k = 0; k < chains.at(j).size(); k++)
 		{
-
 			for (int l = 0; l < chains.at(j)[k].size(); l++)
 			{
 				std::vector<int> b(vector_dimension);
-				b[0] = j;
+				b[vector_dimension - 1] = j;
 
-				for (int i = 1; i < vector_dimension; i++)
+				for (int i = vector_dimension - 1; i >= 1; i--)
 				{
 					// FIX
-					b[i] = chains.at(j)[k][l].dataPoint[i - 1]; // used to be for std::vector: b[i] = chains.at(j)[k][l][i - 1];
+					b[i - 1] = chains.at(j)[k][l].dataPoint[i]; // used to be for std::vector: b[i] = chains.at(j)[k][l][i - 1];
 				}
 
+				// doen't work
 				//std::reverse(b.begin(), b.end()); // its ugly, but i couldnt figure out how to do this in the immediete above code in the 10 min i tried. not as simple as it looks?
 
 				//b.setLevel();
@@ -112,7 +112,7 @@ void oeka::calculateHanselChains(int vector_dimension)
 			for (int k = 0; k < num; k++)
 			{
 				std::vector<int> b(vector_dimension);
-				b[0] = k;
+				b[vector_dimension - 1] = k;
 				dvector c;
 				c.dataPoint = b;
 				//b.setLevel();
@@ -428,8 +428,16 @@ void oeka::binarySearch(int i, int l, int r)
 			checkExpansions(vector_class, i, j);
 
 			// dual expansions
-			dualExpansion(i, l, j);
-			dualExpansion(i, j, r);
+			// there needs to be a space between the left and right side of the current vector at location j to be a dual expansion
+			if (j - l > 1)
+			{
+				dualExpansion(i, l, j);
+			}
+
+			if (r - j > 1)
+			{
+				dualExpansion(i, j, r);
+			}
 		}
 
 		if (vector_class == function_kv - 1)
@@ -458,25 +466,55 @@ void oeka::staticOrderQuestionsFunc()
 	{
 		// start binary search
 		int chainSize = (int)hanselChainSet[i].size();
-		int l = 0;
-		int r = chainSize - 1;
-		int start = l + (r - l) / 2;
-		
-		binarySearch(i, l, r);
 
-		/*
-		// non-binary method
-		for (int j = 0; j < chainSize; j++)
+		if (useBinarySearch)
 		{
-			int vector_class = -1;
+			int l = 0;
+			int r = chainSize - 1;
 
-			if (questionFunc(i, j, vector_class))
+			// increment l if its classified and confirmed (only need to check if confirmed since confirmed == classified but not vice versa)
+			while (l < r - 2)
 			{
-				continue;
+				if (hanselChainSet[i][l].confirmed)
+				{
+					l++;
+				}
+				else
+				{
+					break;
+				}
 			}
 
-			checkExpansions(vector_class, i, j);
-		}*/
+			// increment r if its classified
+			while (r > l + 2) // L + 2
+			{
+				if (hanselChainSet[i][r].confirmed)
+				{
+					r--;
+				}
+				else
+				{
+					break;
+				}
+			}
+
+			binarySearch(i, l, r);
+		}
+		else
+		{
+			// non-binary method
+			for (int j = 0; j < chainSize; j++)
+			{
+				int vector_class = -1;
+
+				if (questionFunc(i, j, vector_class))
+				{
+					continue;
+				}
+
+				checkExpansions(vector_class, i, j);
+			}
+		}
 	}
 }
 
@@ -692,8 +730,19 @@ void oeka::checkExpansions(int vector_class, int i, int j)
 	}
 	else if (function_kv > 2)
 	{
-		checkUp(i, j, vector_class, visited_map);
-		checkDown(i, j, vector_class, visited_map);
+		if (vector_class == function_kv - 1)
+		{
+			checkUp(i, j, vector_class, visited_map);
+		}
+		else if (vector_class == 0)
+		{
+			checkDown(i, j, vector_class, visited_map);
+		}
+		else
+		{
+			checkUp(i, j, vector_class, visited_map);
+			checkDown(i, j, vector_class, visited_map);
+		}
 	}
 
 	// now go through and find any dual expansions
@@ -845,34 +894,29 @@ void oeka::findDualExpansion(int i)
 {
 	int chainSize = (int)hanselChainSet[i].size();
 
-	for (int l = 0, r = chainSize - 1; l < chainSize - 1 && r > 0; l += 2, r += 2)
+	// start on left and right side. left increments and right decrements
+	// if two vectors on each side have equivalent classes, then expand everything in the middle
+	for (int l = 0, r = chainSize - 1; l < chainSize / 2 && r > chainSize / 2; l ++, r--)
 	{
-		// dual expansion if classes are not zero, are equal, but not the same vector
-		if (hanselChainSet[i][l]._class != -1 && hanselChainSet[i][l]._class == hanselChainSet[i][r]._class &&
-			&hanselChainSet[i][l] == &hanselChainSet[i][r])
+		// dual expansion if classes are not unassigned, are equal, but not the same vector
+		if (hanselChainSet[i][l].confirmed && hanselChainSet[i][r].confirmed &&
+			hanselChainSet[i][l]._class == hanselChainSet[i][r]._class)
 		{
 			dualExpansion(i, l, r);
 
 			return;
 		}
-		else if (hanselChainSet[i][l + 1]._class != -1 && hanselChainSet[i][l + 1]._class == hanselChainSet[i][r]._class &&
-			&hanselChainSet[i][l + 1] == &hanselChainSet[i][r])
+		else if (hanselChainSet[i][l + 1].confirmed && hanselChainSet[i][r].confirmed &&
+			hanselChainSet[i][l + 1]._class == hanselChainSet[i][r]._class)
 		{
 			dualExpansion(i, l + 1, r);
 
 			return;
 		}
-		else if (hanselChainSet[i][l]._class != -1 && hanselChainSet[i][l]._class == hanselChainSet[i][r - 1]._class &&
-			&hanselChainSet[i][l] == &hanselChainSet[i][r - 1])
+		else if (hanselChainSet[i][l].confirmed && hanselChainSet[i][r - 1].confirmed &&
+			hanselChainSet[i][l]._class == hanselChainSet[i][r - 1]._class)
 		{
 			dualExpansion(i, l, r - 1);
-
-			return;
-		}
-		else if (hanselChainSet[i][l + 1]._class != -1 && hanselChainSet[i][l + 1]._class == hanselChainSet[i][r - 1]._class &&
-			&hanselChainSet[i][l + 1] == &hanselChainSet[i][r - 1])
-		{
-			dualExpansion(i, l + 1, r - 1);
 
 			return;
 		}
@@ -882,31 +926,31 @@ void oeka::findDualExpansion(int i)
 
 void oeka::dualExpansion(int i, int l, int r)
 {
-	if (hanselChainSet[i][l]._class == hanselChainSet[i][r]._class)
+	// j is for current to-be-expanded vector
+	for (int j = l + 1; j < r; j++)
 	{
-		// j is for current to be expanded vector
-		for (int j = l + 1; j < r; j++)
+		// if not confirmed, then 
+		if (!hanselChainSet[i][j].confirmed)
 		{
 			hanselChainSet[i][j]._class = hanselChainSet[i][l]._class;
 			hanselChainSet[i][j - 1].up_expansions.push_back(&hanselChainSet[i][j]);
 			hanselChainSet[i][j].expanded_by = &hanselChainSet[i][j - 1];
 			hanselChainSet[i][j].visited = true;
-
+			hanselChainSet[i][j].confirmed = true; // always confirmed when Boolean
+			numConfirmedInChains[i]++;
 
 			// the vector is a strong value if it is maximum function kv and was up expanded
 			if (hanselChainSet[i][j]._class == function_kv - 1)
 			{
 				hanselChainSet[i][j].weak = false;
-				hanselChainSet[i][j].confirmed = true; // always confirmed when Boolean
-				numConfirmedInChains[i]++;
 			}
 			// the vector is a strong value if is 0 and was down expanded
 			else if (hanselChainSet[i][j]._class == 0)
 			{
 				hanselChainSet[i][j].weak = false;
-				hanselChainSet[i][j].confirmed = true; // always confirmed when Boolean
-				numConfirmedInChains[i]++;
 			}
+
+			std::cout << "dual expansion!" << std::endl;
 		}
 	}
 }
@@ -1006,50 +1050,59 @@ int oeka::askingOfQuestion(int i, int j)
 		orderOfAskingSummary.push_back(i);
 		orderOfAskingSummary.push_back(j);
 
-
-		std::cout << "\nEnter the class for this data point:\n";
-
-		for (int k = 0; k < dimension; k++)
+		// if there is no oracle, then ask expert
+		if (hanselChainSet[i][j].oracle == -1)
 		{
-			/*if (hanselChainSet[i][j].dataPoint[k])
+			std::cout << "\nEnter the class for this data point:\n";
+
+			for (int k = 0; k < dimension; k++)
 			{
-				std::cout << attributes[k] + "\t\t\t= true (1)" << std::endl;
+				/*if (hanselChainSet[i][j].dataPoint[k])
+				{
+					std::cout << attributes[k] + "\t\t\t= true (1)" << std::endl;
+				}
+				else
+				{
+					std::cout << attributes[k] + "\t\t\t= false (0)" << std::endl;
+				}*/
+
+				// k-value here
+
+				std::cout << attributes[k].name + "\t\t\t= " << hanselChainSet[i][j].dataPoint[k] << std::endl;
+			}
+
+			// if function kv is not binary, the current vector's class is not -1 (unassigned), and there is a possibility that the class could be greater (class is less than highest value)
+			if (function_kv > 2) // this used to be here, but its also in questionFunc(): && hanselChainSet[i][j]._class > -1 && hanselChainSet[i][j]._class < function_kv - 1
+			{
+				// do something
+				if (!hanselChainSet[i][j].lessThan)
+				{
+					std::cout << "\nThe current class of this datapoint can be between " << hanselChainSet[i][j]._class << " and " << function_kv - 1
+						<< ".\nIt was already expanded, but the class can be a higher value according to the given function k-value." << std::flush;
+					std::cout << "Enter Class (" << hanselChainSet[i][j]._class << " - " << function_kv - 1 << "): " << std::flush;
+				}
+				else
+				{
+					std::cout << "\nThe current class of this datapoint can be between 0 and " << hanselChainSet[i][j]._class
+						<< ".\nIt was already expanded, but the class can be a lower value according to the given function k-value." << std::flush;
+					std::cout << "Enter Class (" << 0 << " - " << hanselChainSet[i][j]._class << "): " << std::flush;
+				}
 			}
 			else
 			{
-				std::cout << attributes[k] + "\t\t\t= false (0)" << std::endl;
-			}*/
-
-			// k-value here
-
-			std::cout << attributes[k].name + "\t\t\t= " << hanselChainSet[i][j].dataPoint[k] << std::endl;
-		}
-
-		// if function kv is not binary, the current vector's class is not -1 (unassigned), and there is a possibility that the class could be greater (class is less than highest value)
-		if (function_kv > 2) // this used to be here, but its also in questionFunc(): && hanselChainSet[i][j]._class > -1 && hanselChainSet[i][j]._class < function_kv - 1
-		{
-			// do something
-			if (!hanselChainSet[i][j].lessThan)
-			{
-				std::cout << "\nThe current class of this datapoint can be between " << hanselChainSet[i][j]._class << " and " << function_kv - 1
-					<< ".\nIt was already expanded, but the class can be a higher value according to the given function k-value." << std::flush;
-				std::cout << "Enter Class (" << hanselChainSet[i][j]._class << " - " << function_kv - 1 << "): " << std::flush;
+				std::cout << "Enter Class (0 - " << function_kv - 1 << "): " << std::flush;
 			}
-			else
-			{
-				std::cout << "\nThe current class of this datapoint can be between 0 and " << hanselChainSet[i][j]._class
-					<< ".\nIt was already expanded, but the class can be a lower value according to the given function k-value." << std::flush;
-				std::cout << "Enter Class (" << 0 << " - " << hanselChainSet[i][j]._class << "): " << std::flush;
-			}
+
+			std::cin >> vector_class;
+			std::cin.clear();
+			std::cin.ignore(1000, '\n');
 		}
+		// query oracle
 		else
 		{
-			std::cout << "Enter Class (0 - " << function_kv - 1 << "): " << std::flush;
+			vector_class = hanselChainSet[i][j].oracle;
 		}
 
-		std::cin >> vector_class;
-		std::cin.clear();
-		std::cin.ignore(1000, '\n');
 		questionsAsked++;
 		hanselChainSet[i][j].asked = true;
 		hanselChainSet[i][j].confirmed = true;
@@ -1067,4 +1120,3 @@ int oeka::askingOfQuestion(int i, int j)
 
 	return vector_class;
 }
-

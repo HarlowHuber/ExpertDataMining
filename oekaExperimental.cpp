@@ -675,7 +675,7 @@ std::vector<std::vector<int>> oeka::addNewAttributesToRealData()
 		while (std::getline(file, str))
 		{
 			// parse input
-			auto temp = parse_input(',', str);
+			auto temp = parse_input_int(',', str);
 			std::vector<int> tokens;
 			tokens.reserve(temp.size());
 

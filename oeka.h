@@ -101,6 +101,15 @@ public:
 	// the number of confirmed values in each chain
 	std::vector<int> numConfirmedInChains;
 
+
+	bool useOracle = true;
+
+
+	bool useBinarySearch = true;
+
+
+	std::string oraclePath = "MonotoneDataGenerator/test.csv";
+
 	/// @brief flag for developer. Ask KV questions, yes or no?
 	bool askKV = true;
 
@@ -130,9 +139,6 @@ public:
 
 	/// @brief set of Hansel Chains
 	std::vector<std::vector<dvector>> hanselChainSet;
-
-	/// @brief k-value for each attribute of the dataset
-	//std::vector<int> kv_attributes;
 
 	/// @brief order of the Hansel Chains
 	std::vector<int> hanselChainOrder;
@@ -401,7 +407,7 @@ public:
 
 
 	/// @brief parse a string by a given delimiter into a vector of ints
-	std::vector<int> parse_input(char delimiter, std::string temp);
+	std::vector<int> parse_input_int(char delimiter, std::string temp);
 
 
 	/// @brief parse a string by a given delimeter into a vector of strings

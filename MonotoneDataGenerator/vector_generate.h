@@ -17,6 +17,8 @@ private:
 	// array of k-values for each attribute
 	int* kv_attributes;
 
+	int function_kv;
+
 	// number of attributes
 	int num_attributes;
 
@@ -32,6 +34,7 @@ private:
 	int calc_mb_value(std::vector<int> vector);
 
 	// print a list of vectors grouped by Hamming norm
+	// first line is the k-values and the function k-value
 	void print_sorted_vectors(std::vector<std::multimap<int, struct point, std::greater<int>>> sorted_vectors);
 
 	// print a list of vectors
