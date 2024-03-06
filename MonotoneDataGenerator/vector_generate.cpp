@@ -2,7 +2,7 @@
 #include <chrono>
 
 // constructor
-vector_generate::vector_generate(int* _kv_attributes, int kv_target, int _num_attributes, bool print)
+vector_generate::vector_generate(int* _kv_attributes, int kv_target, int _num_attributes, bool continuous, bool print)
 {
 	auto start = std::chrono::high_resolution_clock::now();
 	kv_attributes = _kv_attributes;
@@ -31,33 +31,55 @@ vector_generate::vector_generate(int* _kv_attributes, int kv_target, int _num_at
 	mapped_vectors[hamming_norm].insert(std::pair(calc_mb_value(max_vector), maxPoint));
 
 	// calculate all vectors and assign monotone function values
-	calculate_all_vectors(max_vector, hamming_norm, num_attributes - 1, mapped_vectors);
+	calculate_all_vectors(max_vector, hamming_norm, num_attributes - 1, mapped_vectors, continuous);
 
-	// sort vectors if necessary
 
-	// assign ordinal class values 
-	int numberPoints = 1;
-
-	for (int i = 0; i < num_attributes; i++)
+	// assign ordinal class values if continuous function is used
+	if (continuous)
 	{
-		numberPoints *= kv_attributes[i];
-	}
+		int numberPoints = 1;
 
-	int split = numberPoints / kv_target;
-	int class_value = 0;
-	int counter = 0;
-
-	for (auto&& group : mapped_vectors)
-	{
-		for (std::multimap<int, point>::reverse_iterator it = group.rbegin(); it != group.rend(); it++)
+		for (int i = 0; i < num_attributes; i++)
 		{
-			if (counter++ >= split)
+			numberPoints *= kv_attributes[i];
+		}
+
+		int split = numberPoints / kv_target;
+		int class_value = 0;
+		int counter = 0;
+
+		for (auto&& group : mapped_vectors)
+		{
+			for (std::multimap<int, point>::reverse_iterator it = group.rbegin(); it != group.rend(); it++)
 			{
-				class_value++;
-				counter = 0;
+				if (counter++ >= split)
+				{
+					class_value++;
+					counter = 0;
+				}
+
+				it->second.class_value = class_value;
 			}
-			
-			it->second.class_value = class_value;
+		}
+	}
+	// use discrete function directly
+	// change program to be able to use flags to create more continuous and/or discrete functions???
+	// 
+	else
+	{
+		for (auto&& group : mapped_vectors)
+		{
+			for (std::multimap<int, point>::reverse_iterator it = group.rbegin(); it != group.rend(); it++)
+			{
+				// function is x1-x3-x5
+				if (it->second.p[0] == 1 && it->second.p[2] == 1 && it->second.p[4] == 1 || 
+					it->second.p[1] == 1 && it->second.p[2] == 1 && it->second.p[4] == 1 ||
+						it->second.p[3] == 1 && it->second.p[4] == 1)
+				{
+
+					it->second.class_value = 1;
+				}
+			}
 		}
 	}
 
@@ -89,7 +111,8 @@ vector_generate::~vector_generate()
 	The number of vectors that are generated will be the product of all k-values multiplied against each other.
 	Therefore, using the last example, the number of vectors will be: 3 * 5 * 2 = 30.
 */
-void vector_generate::calculate_all_vectors(std::vector<int> max_vector, int max_hamming_norm, int max_vector_index, std::vector<std::multimap<int, struct point, std::greater<int>>>& sorted_vectors)
+void vector_generate::calculate_all_vectors(std::vector<int> max_vector, int max_hamming_norm, int max_vector_index, 
+	std::vector<std::multimap<int, struct point, std::greater<int>>>& sorted_vectors, bool continuous)
 {
 	// iterate over every index starting from the given index
 	for (int i = max_vector_index; i >= 0; i--)
@@ -104,7 +127,12 @@ void vector_generate::calculate_all_vectors(std::vector<int> max_vector, int max
 		{
 			struct point newPoint{max_vector, 0, 0};
 			newPoint.p[i] -= decrement;
-			newPoint.function_value = monotone_function(newPoint.p);
+
+			if (continuous)
+			{
+				newPoint.function_value = monotone_function(newPoint.p);
+			}
+		
 			int hamming_norm = max_hamming_norm - decrement;
 			value = newPoint.p[i];
 			decrement++;
@@ -140,7 +168,7 @@ void vector_generate::calculate_all_vectors(std::vector<int> max_vector, int max
 
 			if (i > 0)
 			{
-				calculate_all_vectors(newPoint.p, hamming_norm, i - 1, sorted_vectors); 
+				calculate_all_vectors(newPoint.p, hamming_norm, i - 1, sorted_vectors, continuous); 
 			}
 		}
 	}

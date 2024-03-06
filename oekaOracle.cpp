@@ -9,6 +9,10 @@ std::map<int, std::vector<std::vector<int>>> oeka::readFile(std::string fileName
 	int h = 0; // hamming norm of vector
 	std::map<int, std::vector<std::vector<int>>> oracle; // last element in each vector is the class
 
+
+	// file format 
+	// header -> k-values for each attribute, function kv
+	// rows -> datapoint, class, hamming norm (so it doesn't need to be calculated)
 	std::ifstream file;
 	file.open(fileName);
 
@@ -37,7 +41,7 @@ std::map<int, std::vector<std::vector<int>>> oeka::readFile(std::string fileName
 			// checking if the format is correct
 			if (in.size() > 2)
 			{
-				h = in[in.size() - 1];
+				h = in[in.size() - 1]; // get hamming norm
 				std::vector<int> v;
 				v.insert(v.begin(), in.begin(), in.end() - 1); // copy vector, except for hamming norm
 				oracle[h].push_back(v);
@@ -54,7 +58,7 @@ std::map<int, std::vector<std::vector<int>>> oeka::readFile(std::string fileName
 void oeka::assignOracle(std::map<int, std::vector<std::vector<int>>> oracle)
 {
 	// index location of class in the oracle, which is simply the last element
-	int c = oracle[0][0].size() - 1;
+	int c = (int)oracle[0][0].size() - 1;
 
 	// use vector or counter or somethingg to keep track of questions which have already been answered?
 

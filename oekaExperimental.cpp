@@ -36,7 +36,7 @@
 	}
 }*/
 
-void oeka::manualHanselChainOrder()
+/*void oeka::manualHanselChainOrder()
 {
 	std::cout << "\nThere are " << numChains << " Hansel Chains, labelled 1 through " << numChains << "." << std::endl;
 
@@ -79,7 +79,7 @@ void oeka::manualHanselChainOrder()
 	{
 		hanselChainSet[i] = tempSet[hanselChainOrder[i]];
 	}
-}
+}*/
 
 
 void oeka::f_change_check()

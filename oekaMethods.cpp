@@ -1,7 +1,7 @@
 #include "oeka.h"
 
 
-std::vector<std::vector<oeka::dvector>> oeka::genChains(int num, int vector_dimension, std::unordered_map<int, std::vector<std::vector<dvector>>> chain)
+std::vector<std::vector<dvector>> oeka::genChains(int num, int vector_dimension, std::unordered_map<int, std::vector<std::vector<dvector>>> chain)
 {
 	std::unordered_map<int, std::vector<std::vector<dvector>>> chains = chain;
 
@@ -143,6 +143,63 @@ void oeka::calculateHanselChains(int vector_dimension)
 			i--;
 		}
 	}
+}
+
+
+void oeka::graphHanselChainOrder()
+{
+	// create some sort of graph order
+	graph g(&hanselChainSet);
+	auto minSpanTreeEdgeList = g.kruskal();
+
+	// rearrange hansel chains to match that order
+	std::vector<bool> visited(numChains, false);
+	std::vector<std::vector<dvector>> newHanselChainSet;
+	newHanselChainSet.reserve(numChains);
+
+	for (auto edge : minSpanTreeEdgeList)
+	{
+		int x = std::get<0>(edge);
+		int y = std::get<1>(edge);
+
+		if (!visited[x])
+		{
+			newHanselChainSet.push_back(hanselChainSet[x]);
+			visited[x] = true;
+		}
+
+		if (!visited[y])
+		{
+			newHanselChainSet.push_back(hanselChainSet[y]);
+			visited[y] = true;
+		}
+	}
+
+	// override old order
+	hanselChainSet = newHanselChainSet;
+
+	// print the edgeLists to a file
+	std::fstream fileCG, fileMST;
+	fileCG.open("completeGraph.csv", std::ios::out | std::ios::app);
+	
+	for (const auto& edge : g.completeGraphEdgeList)
+	{
+		fileCG << std::get<0>(edge) << ","
+			<< std::get<1>(edge) << ","
+			<< std::get<2>(edge) << std::endl;
+	}
+
+	fileCG.close();
+	fileMST.open("MST.csv", std::ios::out | std::ios::app);
+
+	for (const auto& edge : minSpanTreeEdgeList)
+	{
+		fileMST << std::get<0>(edge) << ","
+			<< std::get<1>(edge) << ","
+			<< std::get<2>(edge) << std::endl;
+	}
+
+	fileMST.close();
 }
 
 

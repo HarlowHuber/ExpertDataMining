@@ -96,7 +96,6 @@ std::vector<int> oeka::init()
 		calculateHanselChains(dimension);
 		numChains = (int)hanselChainSet.size();
 		numConfirmedInChains.resize(numChains);
-		hanselChainOrder.resize(numChains);
 		chainsVisited.resize(numChains);
 
 		assignOracle(oracle);
@@ -251,7 +250,6 @@ std::vector<int> oeka::init()
 		calculateHanselChains(dimension);
 		numChains = (int)hanselChainSet.size();
 		numConfirmedInChains.resize(numChains);
-		hanselChainOrder.resize(numChains);
 		chainsVisited.resize(numChains);
 	}
 
@@ -273,7 +271,7 @@ std::vector<int> oeka::init()
 	std::cout << "\n1 - Longest Hansel Chain First";
 	std::cout << "\n2 - Manual Hansel Chain Order";
 	std::cout << "\n3 - Default Hansel Chain Algorithm Order";
-	//std::cout << "\n4 - Any Vector Order"; // NOTE: not implemented and likely won't be, but leave it here anyway
+	std::cout << "\n4 - Graph Hansel Chain Order"; 
 	std::cout << "\nEnter: " << std::flush;
 
 	try
@@ -292,7 +290,7 @@ std::vector<int> oeka::init()
 	std::cout << "\nEnter: " << std::flush;
 	std::cin >> chainJump;
 
-	calculateAllPossibleExpansions();
+	//calculateAllPossibleExpansions();
 
 	return genericParentOrChildList;
 }
@@ -436,7 +434,7 @@ void oeka::start()
 			// manual Hansel Chain order
 			// let user order chains however they want
 		case 2:
-			manualHanselChainOrder();
+			//manualHanselChainOrder();
 			numberAssignment();
 			askMajorityFlag();
 			chainJumpOrderQuestionsFunc();
@@ -481,6 +479,7 @@ void oeka::start()
 				{
 					return a.size() > b.size();
 				});;
+			calculateAllPossibleExpansions();
 			numberAssignment();
 			askMajorityFlag();
 			staticOrderQuestionsFunc();
@@ -489,7 +488,8 @@ void oeka::start()
 			// manual Hansel Chain order
 			// let user order chains however they want
 		case 2:
-			manualHanselChainOrder();
+			//manualHanselChainOrder();
+			calculateAllPossibleExpansions();
 			numberAssignment();
 			askMajorityFlag();
 			staticOrderQuestionsFunc();
@@ -497,18 +497,20 @@ void oeka::start()
 
 			// default order
 		case 3:
+			calculateAllPossibleExpansions();
 			numberAssignment();
 			askMajorityFlag();
 			staticOrderQuestionsFunc();
 			break;
 
-			// any oldVector order
-		/*case 4:
-			anyVectorOrder();
+			// graph order
+		case 4:
+			graphHanselChainOrder();
+			calculateAllPossibleExpansions();
 			numberAssignment();
 			askMajorityFlag();
 			staticOrderQuestionsFunc();
-			break;*/
+			break;
 
 			// shortest chain first order
 		default:
@@ -517,6 +519,7 @@ void oeka::start()
 				{
 					return a.size() < b.size();
 				});
+			calculateAllPossibleExpansions();
 			numberAssignment();
 			askMajorityFlag();
 			staticOrderQuestionsFunc();

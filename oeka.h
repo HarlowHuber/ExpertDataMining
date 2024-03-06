@@ -8,7 +8,6 @@ Supervisor: Dr. Boris Kovalerchuk
 #include <fstream>
 #include <iostream>
 #include <string>
-#include <vector>
 #include <algorithm>
 #include <map>
 #include <windows.h>
@@ -17,86 +16,23 @@ Supervisor: Dr. Boris Kovalerchuk
 #include <iomanip>
 #include <filesystem>
 #include <array>
+#include "dvector.h"
+#include "graph.h"
+
+
+struct attribute
+{
+	std::string name = "";
+	int kv = 2;
+	int trueValue = -1; // "greater than or equal to"
+	int trueIndex = -1; // index location for value
+};
+
 
 class oeka
 {
 public:
-	/// @brief dvector, or datapoint vector, is simply a vector with information about a datapoint
-	struct dvector
-	{
-		/// @brief the n-D data point to be considered as a vector
-		std::vector<int> dataPoint;
-
-		/// @brief the class or value of the dataPoint
-		int _class = -1;
-
-		/// @brief the class of the dataPoint, as determined by the Oracle (for use in testing of question reduction methods)
-		int oracle = -1;
-
-		/// @brief confirmed answer through either answering the question, Boolean expansion, or double-expansion (terminology for this is tentative)
-		bool confirmed = false;
-
-		/// @brief by default the class is great than or equal to. However, if this flag is true, then the class is less than or equal to.
-		bool lessThan = false;
-
-		/// @brief by default the class is weak (0 and asked/down-expanded or 1 and asked/up-expanded)
-		bool weak = true; 
-
-		/// @brief the index of this vector's Hansel Chain and the index of the vector in the Hansel Chain, respectively
-		std::pair<int, int> number;
-
-		/// @brief the zero-to-zero expansions that occured
-		std::vector<dvector*> down_expansions;
-
-		/// @brief the one-to-one expansions that occured
-		std::vector<dvector*> up_expansions;
-
-		/// @brief the zero-to-zero expansions that are possible
-		std::vector<dvector*> down_expandable;
-
-		/// @brief the one-to-one expansions that are possible
-		std::vector<dvector*> up_expandable;
-
-		// unexpandable is probably obsolete now
-		/// @brief zero-to-zero expansions that are impossible because the given class was not zero
-		//std::vector<dvector*> unexpandable_zero;
-
-		/// @brief one-to-one expansions that are impossible because the given class was not one
-		//std::vector<dvector*> unexpandable_one;
-
-		/// @brief true if the vector was "fixed" as a result of a violation of monotonicity, or simply an f-change
-		bool f_change = false;
-
-		/// @brief a pointer to a dvector if it expanded this dvector
-		dvector* expanded_by = NULL;
-
-		/// @brief if the vector is visited
-		bool visited = false;
-
-		/// @brief if this vector was asked to the expert/user
-		bool asked = false;
-
-		/// @brief signals whether the vector contains a majority of true attributes, meaning either 50% are true or the ceiling of that
-		bool majorityFlag = false;
-
-		/// @brief this number represents the order that this question was presented to the expert/user
-		int finalQueryOrder = 0;
-
-		/// @brief this number represents the order after being updated due to a chainJump ordering of questions
-		int updatedQueryOrder = 0;
-
-		/// @brief this number represents the order of questions that was planned to be presented to the expert/user
-		int plannedQueryOrder = 0;
-	};
-
-
-	struct attribute
-	{
-		std::string name = "";
-		int kv = 2;
-		int trueValue = -1; // "greater than or equal to"
-		int trueIndex = -1; // index location for value
-	};
+	// flags
 
 	// the number of confirmed values in each chain
 	std::vector<int> numConfirmedInChains;
@@ -108,7 +44,12 @@ public:
 	bool useBinarySearch = true;
 
 
-	std::string oraclePath = "MonotoneDataGenerator/test.csv";
+	bool useGraph = true; // not currently used
+
+
+	/// @brief needs to be changed for whatever oracle is supposed to be used
+	std::string oraclePath = "MonotoneDataGenerator/kv3_7D_summation.csv"; //kv2_5D_x1x3x5_v_x2x3x5_v_x4x5.csv
+	//kv3_7D_summation.csv
 
 	/// @brief flag for developer. Ask KV questions, yes or no?
 	bool askKV = true;
@@ -140,8 +81,6 @@ public:
 	/// @brief set of Hansel Chains
 	std::vector<std::vector<dvector>> hanselChainSet;
 
-	/// @brief order of the Hansel Chains
-	std::vector<int> hanselChainOrder;
 
 	/// @brief check whether each Chain has been ordered when user is manually ordering them
 	std::vector<bool> chainsVisited;
@@ -149,9 +88,6 @@ public:
 	/// @brief the order of questions that are asked to the expert/user. Even elements are the Chain of the asked question, whereas the odd element is the vector.
 	/// used for the summary in the results output.
 	std::vector<int> orderOfAskingSummary;
-
-	/// @brief list of attributes which must be true for a datapoint/vector to be true. List of index locations
-	//std::vector<int> trueAttributes;
 
 	/// @brief the order of Hansel Chains to be used
 	int orderOption = -1;
@@ -252,8 +188,8 @@ public:
 	void binarySearch(int i, int l, int r);
 
 
-	/// @brief order the Hansel Chains manually by a given sequence of numbers
-	void manualHanselChainOrder();
+	/// @brief order the Hansel Chains by some sort of graph (shortest path or MST)
+	void graphHanselChainOrder();
 
 
 	/// @brief expandable expansions and unexpandable expansions
@@ -460,20 +396,6 @@ public:
 
 	/// @brief start expert data mining sequence
 	void start();
-
-
-	/// @brief create adjacency matrix of Hansel Chains
-	/// @return adjacency matrix in the form of a vector
-	std::vector<std::array<int, 3>> createGraph();
-
-
-	std::vector<std::array<int, 3>>  kruskal(std::vector<std::array<int, 3>> edgeList);
-
-
-	int chainHammingDistance(int l, int r);
-
-
-	int chainHausdorffDistance(int l, int r);
 
 
 	std::map<int, std::vector<std::vector<int>>> readFile(std::string fileName);

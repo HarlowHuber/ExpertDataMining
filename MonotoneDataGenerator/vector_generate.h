@@ -7,8 +7,8 @@
 struct point
 {
 	std::vector<int> p;
-	int function_value = 0;
-	int class_value = 0;
+	int function_value = -1;
+	int class_value = -1;
 };
 
 class vector_generate
@@ -25,7 +25,8 @@ private:
 	std::vector<std::multimap<int, std::vector<int>, std::greater<int>>> mapped_vectors;
 
 	// calculate all vectors grouped by Hamming norm and sorted
-	void calculate_all_vectors(std::vector<int> max_vector, int max_hamming_norm, int max_vector_index, std::vector<std::multimap<int, struct point, std::greater<int>>>& sorted_vectors);
+	void calculate_all_vectors(std::vector<int> max_vector, int max_hamming_norm, int max_vector_index, 
+		std::vector<std::multimap<int, struct point, std::greater<int>>>& sorted_vectors, bool continuous);
 
 	// computes output based on input vector
 	int monotone_function(std::vector<int> p);
@@ -42,7 +43,7 @@ private:
 
 public:
 	// constructor
-	vector_generate(int* _kv_attributes, int kv_target, int _num_attributes, bool print);
+	vector_generate(int* _kv_attributes, int kv_target, int _num_attributes, bool continuous, bool print);
 
 	// destructor
 	~vector_generate();
