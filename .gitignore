@@ -13,4 +13,5 @@
 *.tlog
 *.txt
 *.idb
+/env
 .vs/ExpertDataMining/v17/.suo
